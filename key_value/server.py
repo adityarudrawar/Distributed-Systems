@@ -111,48 +111,51 @@ def setFunction(request, conn):
         else:
             response = b"NOT_STORED\r\n"
         
-        conn.sendall(response)
+        if not noReply:
+            conn.sendall(response)
     except Exception as e:
         print(e)
+        conn.sendall(b"")
 
-def getFunction(request, conn):
+def getFunction(request, conn, id):
+    try:
+        key = request.split(' ')[1].replace('\r\n', '')
 
-    key = request.split(' ')[1].replace('\r\n', '')
+        object = readFromFile(key)
 
-    object = readFromFile(key)
+        if object != None:
+            cmd = b'VALUE' + b' ' + key.encode() + b' ' + str(object['flags']).encode() + b' ' + str(object['valueSize']).encode() + b'\r\n'
+            conn.sendall(cmd)
+            conn.sendall(object['value'].encode() + b'\r\n' )
+        
+        conn.sendall("END\r\n".encode())
+    except Exception as e:
+        print(f"Exception raised in getFunction for client id: {id}")
+        print(e)
 
-    if object != None:
-        cmd = b'VALUE' + b' ' + key.encode() + b' ' + str(object['flags']).encode() + b' ' + str(object['valueSize']).encode() + b'\r\n'
-        conn.sendall(cmd)
-        conn.sendall(object['value'].encode() + b'\r\n' )
-    
-    conn.sendall("END\r\n".encode())
-
-def getOrSet(request, conn):
+def getOrSet(request, conn, id):
     try:
         request = request.decode()
 
         if request[:3] == "set":
             print("setting new value")
-            threading.Thread(target=setFunction, args=(request, conn, )).start()
+            threading.Thread(target=setFunction, args=(request, conn, id, )).start()
         elif request[:3] == "get":
             print("getting new value")
-            threading.Thread(target=getFunction, args=(request, conn, )).start()
-        else:
-            conn.sendall(b"non-acceptable command\r\n")
+            threading.Thread(target=getFunction, args=(request, conn, id, )).start()
     except Exception as e:
-        # pass
+        print(f"Exception raised in getOrSet for client id: {id}")
         print(e)
 
 def handleClient(conn, addr, id):
         while True:
             try:
                 request = conn.recv(PAYLOAD_SIZE)
-                threading.Thread(target=getOrSet, args=(request, conn, )).start()
+                threading.Thread(target=getOrSet, args=(request, conn, id, )).start()
             except Exception as e:
-                pass
-
-                #  print(e)
+                print(f"Exception raised in handleClient for client id: {id}")
+                print(e)
+                
         conn.close()
         print("connection closed: ", id)
 
