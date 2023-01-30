@@ -6,7 +6,7 @@ import time
 import json
 import pdb
 
-d = {}
+dataStore = {}
 
 def writeToFile(key, object):
     try:
@@ -16,11 +16,11 @@ def writeToFile(key, object):
 
         global_lock.acquire()
 
-        d[key] = object
+        dataStore[key] = object
 
         fp = open('data.json', 'w')
         
-        json.dump(d, fp)
+        json.dump(dataStore, fp)
         
         fp.close()
 
@@ -42,12 +42,12 @@ def readFromFile(key):
 
         fp = open('data.json', 'r')
         
-        d = json.load(fp)
+        dataStore = json.load(fp)
         
-        if key not in d:
+        if key not in dataStore:
             return None
 
-        obj = d[key]
+        obj = dataStore[key]
 
         fp.close()
 
@@ -73,7 +73,7 @@ def recvAll(conn, valueSize):
     
     return data.decode()
 
-def setFunction(request, conn):
+def setFunction(request, conn, id):
 
     # noreply : True =>  ['set', 'some_key', '0', '0', '10', 'noreply\r\nsome_value\r\n']
     # noreply : False => ['set', 'some_key', '0', '0', '10\r\nsome_value\r\n']
@@ -95,7 +95,7 @@ def setFunction(request, conn):
             valueSize = int(request[4])
             value = request[5].split("\r\n")[1]
 
-        print(key, flags, expiry, noReply, valueSize, value)
+        print("setFunction =>",key, flags, expiry, noReply, valueSize, value)
 
         object = {
             "value": value,
@@ -128,7 +128,8 @@ def getFunction(request, conn, id):
             conn.sendall(cmd)
             conn.sendall(object['value'].encode() + b'\r\n' )
         
-        conn.sendall("END\r\n".encode())
+        conn.sendall(b"END\r\n")
+        print(f"Get request finished for client id: {id}")
     except Exception as e:
         print(f"Exception raised in getFunction for client id: {id}")
         print(e)
@@ -155,7 +156,7 @@ def handleClient(conn, addr, id):
             except Exception as e:
                 print(f"Exception raised in handleClient for client id: {id}")
                 print(e)
-                
+
         conn.close()
         print("connection closed: ", id)
 
