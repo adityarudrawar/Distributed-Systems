@@ -8,7 +8,7 @@ import pdb
 
 d = {}
 
-def writeToFile(key, value):
+def writeToFile(key, object):
     try:
         while global_lock.locked():
             time.sleep(0.01)
@@ -16,7 +16,7 @@ def writeToFile(key, value):
 
         global_lock.acquire()
 
-        d[key] = value
+        d[key] = object
 
         fp = open('data.json', 'w')
         
@@ -39,20 +39,19 @@ def writeToFile(key, value):
 
 def readFromFile(key):
     try:
-        value = ""
 
         fp = open('data.json', 'r')
         
         d = json.load(fp)
         
         if key not in d:
-            value = ""
-        value = d[key]
+            return None
 
+        obj = d[key]
 
         fp.close()
 
-        return value
+        return obj
     
     except Exception as e:
         print(f"Exception raised while reading file for key: {key} =>: {e}")
@@ -76,56 +75,84 @@ def recvAll(conn, valueSize):
 
 def setFunction(request, conn):
 
-    key = request[1]
-    valueSize = int(request[2])
+    # noreply : True =>  ['set', 'some_key', '0', '0', '10', 'noreply\r\nsome_value\r\n']
+    # noreply : False => ['set', 'some_key', '0', '0', '10\r\nsome_value\r\n']
+    try:
+        # User this logic for split base.py : 1649
+        # .find(b"\r\n")
+        # tokenPos = request.find('\r\n')
+        request = request.split(" ")
+        key = request[1]
+        flags = request[2]
+        expiry = request[3]
 
-    value = recvAll(conn, valueSize)
+        if len(request) <= 5:
+            noReply = False
+            valueSize = int(request[4].split("\r\n")[0])
+            value = request[4].split("\r\n")[1]
+        else:
+            noReply = True
+            valueSize = int(request[4])
+            value = request[5].split("\r\n")[1]
 
-    # value = conn.recv(PAYLOAD_SIZE).decode()
+        print(key, flags, expiry, noReply, valueSize, value)
 
-    if writeToFile(key, value):
-        response = "STORED\r\n"
-    else:
-        response = "NOT-STORED\r\n"
-    
-    conn.sendall(response.encode())
+        object = {
+            "value": value,
+            "valueSize": valueSize,
+            "flags": flags,
+            "expiry": expiry,
+            "noReply": noReply,
+        }
+        response = b''
+
+        if writeToFile(key, object):
+            response = b"STORED\r\n"
+        else:
+            response = b"NOT_STORED\r\n"
+        
+        conn.sendall(response)
+    except Exception as e:
+        print(e)
 
 def getFunction(request, conn):
-     
-    key = request[1].replace('\r\n', '')
 
-    dataBlock = readFromFile(key)
-    
-    if dataBlock != None:
-        conn.sendall(f"VALUE {key} {len(dataBlock)} \r\n".encode())
-        time.sleep(1)
-        conn.sendall( dataBlock.encode() )
-        time.sleep(1)
+    key = request.split(' ')[1].replace('\r\n', '')
+
+    object = readFromFile(key)
+
+    if object != None:
+        cmd = b'VALUE' + b' ' + key.encode() + b' ' + str(object['flags']).encode() + b' ' + str(object['valueSize']).encode() + b'\r\n'
+        conn.sendall(cmd)
+        conn.sendall(object['value'].encode() + b'\r\n' )
     
     conn.sendall("END\r\n".encode())
 
+def getOrSet(request, conn):
+    try:
+        request = request.decode()
+
+        if request[:3] == "set":
+            print("setting new value")
+            threading.Thread(target=setFunction, args=(request, conn, )).start()
+        elif request[:3] == "get":
+            print("getting new value")
+            threading.Thread(target=getFunction, args=(request, conn, )).start()
+        else:
+            conn.sendall(b"non-acceptable command\r\n")
+    except Exception as e:
+        # pass
+        print(e)
 
 def handleClient(conn, addr, id):
-        
         while True:
-            request = conn.recv(PAYLOAD_SIZE)
+            try:
+                request = conn.recv(PAYLOAD_SIZE)
+                threading.Thread(target=getOrSet, args=(request, conn, )).start()
+            except Exception as e:
+                pass
 
-            request = request.decode()
-
-            request = request.split(" ")
-
-            if request[0] == "set":
-                print("setting new value")
-                setThread = threading.Thread(target=setFunction, args=(request, conn, ))
-                setThread.start()
-                setThread.join()
-
-            elif request[0] == "get":
-                print("getting new value")
-                getThread = threading.Thread(target=getFunction, args=(request, conn, ))
-                getThread.start()
-                getThread.join()
-
+                #  print(e)
         conn.close()
         print("connection closed: ", id)
 
