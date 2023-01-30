@@ -5,8 +5,12 @@ import threading
 import time
 import json
 import pdb
+import datetime
+import time
+import os
 
-dataStore = {}
+def keyIsValid(key):
+    pass
 
 def writeToFile(key, object):
     try:
@@ -40,6 +44,10 @@ def writeToFile(key, object):
 def readFromFile(key):
     try:
 
+        while global_lock.locked():
+            time.sleep(0.01)
+            continue
+
         fp = open('data.json', 'r')
         
         dataStore = json.load(fp)
@@ -48,14 +56,15 @@ def readFromFile(key):
             return None
 
         obj = dataStore[key]
-
+        
+        # TODO: Logic for expiry
         fp.close()
 
         return obj
     
     except Exception as e:
         print(f"Exception raised while reading file for key: {key} =>: {e}")
-    
+        # pdb.set_trace()
         return None
 
 def recvAll(conn, valueSize):
@@ -75,35 +84,38 @@ def recvAll(conn, valueSize):
 
 def setFunction(request, conn, id):
 
-    # noreply : True =>  ['set', 'some_key', '0', '0', '10', 'noreply\r\nsome_value\r\n']
-    # noreply : False => ['set', 'some_key', '0', '0', '10\r\nsome_value\r\n']
     try:
-        # User this logic for split base.py : 1649
-        # .find(b"\r\n")
-        # tokenPos = request.find('\r\n')
-        request = request.split(" ")
-        key = request[1]
-        flags = request[2]
-        expiry = request[3]
+        tokenPos = request.find('\r\n')
+        
+        before, after = request[:tokenPos], request[tokenPos + 2 :]
+        before = before.split(" ")
 
-        if len(request) <= 5:
+        key = before[1]
+        flags = before[2]
+        expiry = before[3]
+        
+        if len(before) <= 5:
             noReply = False
-            valueSize = int(request[4].split("\r\n")[0])
-            value = request[4].split("\r\n")[1]
+            valueSize = int(before[4].split("\r\n")[0])
+            value = after[:valueSize]
         else:
             noReply = True
-            valueSize = int(request[4])
-            value = request[5].split("\r\n")[1]
+            valueSize = int(before[4])
+            value = after[:valueSize]
+        
+        if noReply:
+            conn.sendall(b"STORED\r\n")
+    
+        print("setFunction =>",key, flags, expiry, valueSize, noReply, value)
+        # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
+        object = [
+            value,
+            valueSize,
+            flags,
+            expiry,
+            noReply
+        ]
 
-        print("setFunction =>",key, flags, expiry, noReply, valueSize, value)
-
-        object = {
-            "value": value,
-            "valueSize": valueSize,
-            "flags": flags,
-            "expiry": expiry,
-            "noReply": noReply,
-        }
         response = b''
 
         if writeToFile(key, object):
@@ -114,8 +126,9 @@ def setFunction(request, conn, id):
         if not noReply:
             conn.sendall(response)
     except Exception as e:
+        print("Exception raised in setFunction")
         print(e)
-        conn.sendall(b"")
+        conn.sendall(b"NOT_STORED\r\n")
 
 def getFunction(request, conn, id):
     try:
@@ -123,42 +136,20 @@ def getFunction(request, conn, id):
 
         object = readFromFile(key)
 
+         # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
+
         if object != None:
-            cmd = b'VALUE' + b' ' + key.encode() + b' ' + str(object['flags']).encode() + b' ' + str(object['valueSize']).encode() + b'\r\n'
+            # VALUE flags valueSize\r\n
+            # value\r\n
+            cmd = b'VALUE' + b' ' + key.encode() + b' ' + str(object[2]).encode() + b' ' + str(object[1]).encode() + b'\r\n'
             conn.sendall(cmd)
-            conn.sendall(object['value'].encode() + b'\r\n' )
+            conn.sendall(object[0].encode() + b'\r\n' )
         
         conn.sendall(b"END\r\n")
         print(f"Get request finished for client id: {id}")
     except Exception as e:
         print(f"Exception raised in getFunction for client id: {id}")
         print(e)
-
-def getOrSet(request, conn, id):
-    try:
-        request = request.decode()
-
-        if request[:3] == "set":
-            print("setting new value")
-            threading.Thread(target=setFunction, args=(request, conn, id, )).start()
-        elif request[:3] == "get":
-            print("getting new value")
-            threading.Thread(target=getFunction, args=(request, conn, id, )).start()
-    except Exception as e:
-        print(f"Exception raised in getOrSet for client id: {id}")
-        print(e)
-
-def handleClient(conn, addr, id):
-        while True:
-            try:
-                request = conn.recv(PAYLOAD_SIZE)
-                threading.Thread(target=getOrSet, args=(request, conn, id, )).start()
-            except Exception as e:
-                print(f"Exception raised in handleClient for client id: {id}")
-                print(e)
-
-        conn.close()
-        print("connection closed: ", id)
 
 if __name__ == "__main__":
 
@@ -170,6 +161,17 @@ if __name__ == "__main__":
     SERVER_HOST = os.getenv("SERVER_HOST")
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
+    
+    # If data.json does not exists or if it exists but is empty
+    if not os.path.isfile('data.json') or os.stat("data.json").st_size == 0:
+        fp = open('data.json', 'w')
+        json.dump({}, fp)
+        dataStore = {}
+        fp.close()
+    else:
+        fp = open('data.json', 'r')        
+        dataStore = json.load(fp)
+        fp.close()
 
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -180,10 +182,22 @@ if __name__ == "__main__":
 
     while True:
         conn, addr = serverSocket.accept()
+        try:
+            request = conn.recv(PAYLOAD_SIZE)
+            
+            request = request.decode()
 
-        t = threading.Thread(target=handleClient, args=(conn, addr, i, ))
-
-        t.start()
+            if request[:3] == "set":
+                print("setting new value")
+                threading.Thread(target=setFunction, args=(request, conn, id, )).start()
+            elif request[:3] == "get":
+                print("getting new value")
+                threading.Thread(target=getFunction, args=(request, conn, id, )).start()
+            else:
+                print("Invalid command")
+        except Exception as e:
+            print(f"Exception raised while connecting to client id: {id}")
+            print(e)
 
         print("new client connected: ",i)
         
