@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
             setResultsPerClient.append([setKey,  result, end - start])
 
-            print(f'Client: {id} ', result)
+            # print(f'Client: {id} ', result)
             client.close()
             
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             end = time.time()
 
             getResultsPerClient.append([key,  result, end - start])
-            print(f'Key: {key} ', result)
+            # print(f'Key: {key} ', result)
 
             client.close()
 
