@@ -63,6 +63,7 @@ def readFromFile(key):
     finally:
         # global_lock.release()
         pass
+
 def recvAll(conn, valueSize):
     
     data = b''
