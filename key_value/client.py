@@ -23,7 +23,7 @@ if __name__ == "__main__":
         
         setResultsPerClient = []
         getResultsPerClient = []
-        numberOfClients = 200
+        numberOfClients = 10
 
         client = None
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
             setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
             
-            no_reply = random.choice([False])
+            no_reply = random.choice([False, True])
             
             start = time.time()
             
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         getResultsPerClient = []
 
         for i in range(numberOfClients):
-            t1 = threading.Thread(target=setFunction, args=(i, True, ))
+            t1 = threading.Thread(target=setFunction, args=(i, False, ))
             threads.append(t1)
 
             t2 = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
@@ -124,6 +124,26 @@ if __name__ == "__main__":
         print("-------------------------------------")
         print('setResultsPerClient')
         print(setResultsPerClient)
+
+        print("-------------------------------------")
+        print('getResultsPerClient')
+        print(getResultsPerClient)
+
+
+        threads = []
+        getResultsPerClient = []
+
+        randomKeys = [''.join(random.choices(string.ascii_uppercase, k=10)) for _ in range(numberOfClients)]
+
+        for i in range(numberOfClients):
+            t = threading.Thread(target=getFunction, args=(randomKeys[i],))
+            threads.append(t)
+        
+        for t in threads:
+            t.start()
+        
+        for t in threads:
+            t.join()
 
         print("-------------------------------------")
         print('getResultsPerClient')
