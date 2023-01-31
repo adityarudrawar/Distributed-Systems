@@ -8,10 +8,6 @@ import threading
 import pdb
 from pymemcache.client.base import Client
 
-# client = Client('localhost')
-# client.set('some_key', 'some_value')
-# result = client.get('some_key')
-
 if __name__ == "__main__":
     try:
         print("client intialized")
@@ -22,93 +18,101 @@ if __name__ == "__main__":
         CLIENT_PORT = int(os.getenv("CLIENT_PORT"))
         PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
 
-        
-
-        keys = ['CQLYFMJLNE','JNDYNVQWMV','KJZBRUSZCR','TACLEQSQNW','QIIUVMOWLW','YAZCQYCLXJ','IBNOODKYMR','FSHPTJBIFB','ZBQOTCMYHD','EGZYKOYULL','MBMPVMHSTC','DRGEHQSTQP','NNFCMXRKHF','PFOWBKXQNI','CPBNOKCFQS','BHARUKNYVM','XFILOPALJO','KFGECLUFYL','JSXFTCNUVZ','AYXFWKPIIO','EIFAOPDKNU','QDQBRITGAF','XTFDXGMVZR','HYCIJULFUD','AJMILUGQVF','IRHLHTCCAR','CAGOOWJGWM','JWLPSWDEWL','VHECOVCHQZ','KCMMKBUUKE','DEHOLYPAZM','DJYAFQPQPB','VOFBAZJNYI','WYOTBGHKEU','BNCXIUPFWP','GHMGRDCZMG','HZUMUQBWOV','BPNROAWYGL','QYVIVMLXBL','TTUFCMCTKA','PHFRMWLOUF','SQPWCOUNEN','EWFEAMDXRC','JLXWPARRWE','RPZQCLSGTG','DWLLHQTXID','YRNOHFIHFH','OGUQMOLXHQ','VWBEFHQPVL','NBRCXFGTPV']
-
         threads = []
         generatedKeys = []
-
-        # ------------------SET-----------------------
-        def setKeyValue(i):
-            
-            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-            clientSocket.connect((CLIENT_HOST, CLIENT_PORT))    
-            
-            # setKey = ''.join(random.choices(string.ascii_uppercase, k=10))
-            # generatedKeys.append(setKey)
-            setKey = keys[i]
-            setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
-
-
-            setCommand = f"set {setKey} {len(setValue)} \r\n"
-            
-            clientSocket.sendall(setCommand.encode())
-            time.sleep(1)
-            clientSocket.sendall(setValue.encode() + b' \r\n')
-
-            data = clientSocket.recv(PAYLOAD_SIZE)
-
-            print(f"data received for {setKey}: {data}")
-            
-            clientSocket.close()
-
-
-        for i in range(50):
-            t = threading.Thread(target=setKeyValue, args=(i,))
-            threads.append(t)
-            # t.start()
-
-            # setKeyValue(i)
-
         
+        setResultsPerClient = []
+        getResultsPerClient = []
+        numberOfClients = 200
 
-        # with open("keys.txt", "w") as txt_file:
-        #     for line in generatedKeys:
-        #         txt_file.write("".join(line) + "\n")
+        client = None
 
-        # exit()
-
-        #--------------------------------GET------------------------
-        def getKeyValue(key):
+        def setFunction(id, flag):
             
-            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-            clientSocket.connect((CLIENT_HOST, CLIENT_PORT))    
-
-            getCommand = f"get {key}\r\n"
-
-            clientSocket.sendall(getCommand.encode())
-
-            response = clientSocket.recv(PAYLOAD_SIZE)
-
-
-            if response != b"END\r\n":
-                response = response.decode()
-
-                response = response.split(" ")
-                
-                value = b''
-                receivedData = clientSocket.recv(PAYLOAD_SIZE)
-
-                while receivedData != b"END\r\n":
-                    value += receivedData
-                    receivedData = clientSocket.recv(PAYLOAD_SIZE)
-                
-                print(f"key: {key} Received value from client: {value}")
+            if flag:
+                setKey = ''.join(random.choices(string.ascii_uppercase, k=10))
+                generatedKeys.append(setKey)
             else:
-                print(f"No data for key: {key} response received: {response}")
-            clientSocket.close()
+                setKey = generatedKeys[id]
 
-        for i in range(50):
-            key = random.choice(keys)
-            t = threading.Thread(target=getKeyValue, args=(key,))
+            setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
+            
+            no_reply = random.choice([False])
+            
+            start = time.time()
+            
+            client = Client(CLIENT_HOST + ":" + str(CLIENT_PORT), default_noreply= no_reply)
+            result = client.set(setKey, setValue)
+
+            end = time.time()
+
+            setResultsPerClient.append([setKey,  result, end - start])
+
+            print(f'Client: {id} ', result)
+            client.close()
+            
+
+        def getFunction(key):
+            
+            start = time.time()
+
+            client = Client(CLIENT_HOST + ":" + str(CLIENT_PORT))
+            result = client.get(key)            
+            
+            end = time.time()
+
+            getResultsPerClient.append([key,  result, end - start])
+            print(f'Key: {key} ', result)
+
+            client.close()
+
+        # Concurrent SET requests
+        for i in range(numberOfClients):
+            t = threading.Thread(target=setFunction, args=(i, True, ))
             threads.append(t)
-            # t.start()
-
-            # getKeyValue(key)
         
+        for t in threads:
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        print("-------------------------------------")
+        print('generatedKeys')
+        print(generatedKeys)
+
+        print("-------------------------------------")
+        print('setResultsPerClient')
+        print(setResultsPerClient)
+
+        threads = []
+
+        # Concurrent GET requests
+        for i in range(numberOfClients):
+            t = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
+            threads.append(t)
+
+        for t in threads:
+            t.start()
+        
+        for t in threads:
+            t.join()
+    
+        print("-------------------------------------")
+        print('getResultsPerClient')
+        print(getResultsPerClient)
+
+        threads = []
+        setResultsPerClient = []
+        getResultsPerClient = []
+
+        for i in range(numberOfClients):
+            t1 = threading.Thread(target=setFunction, args=(i, True, ))
+            threads.append(t1)
+
+            t2 = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
+            threads.append(t2)
+
         random.shuffle(threads)
 
         for t in threads:
@@ -117,9 +121,13 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
 
-        getKeyValue("Aditya")
-        print("client closed")
+        print("-------------------------------------")
+        print('setResultsPerClient')
+        print(setResultsPerClient)
+
+        print("-------------------------------------")
+        print('getResultsPerClient')
+        print(getResultsPerClient)
+
     except Exception as e:
         print(e)
-    
-    pdb.set_trace()
