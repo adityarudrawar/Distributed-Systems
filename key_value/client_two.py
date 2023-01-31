@@ -23,84 +23,87 @@ if __name__ == "__main__":
         
         setResultsPerClient = []
         getResultsPerClient = []
-        numberOfClients = 50
+        numberOfClients = 3
 
         client = None
 
         def setFunction(id, flag):
-            
-            if flag:
-                setKey = ''.join(random.choices(string.ascii_uppercase, k=10))
-                generatedKeys.append(setKey)
-            else:
-                setKey = generatedKeys[id]
+            try:
+                if flag:
+                    setKey = ''.join(random.choices(string.ascii_uppercase, k=10))
+                    generatedKeys.append(setKey)
+                else:
+                    setKey = generatedKeys[id]
 
-            setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
-            
-            no_reply = random.choice([False, True])
-            
-            start = time.time()
-            
-            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            clientSocket.settimeout(5)
-            clientSocket.connect((CLIENT_HOST, CLIENT_PORT))    
+                setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
+                
+                no_reply = random.choice([False, True])
+                
+                start = time.time()
+                
+                clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                clientSocket.settimeout(5)
+                clientSocket.connect((CLIENT_HOST, CLIENT_PORT))    
 
-            # b'set ETWSKFYBAK 0 0 50\r\nxfvliagdmdtsqmurukihpzspfmsyofbrpzydpjjyumgamohhoy\r\n'
-            # b'set UZARBDKKZN 0 0 50 noreply\r\nemonytakkywvnllgfojyivnqnikwgliydjunwgsjdimuxveywb\r\n'
+                # b'set ETWSKFYBAK 0 0 50\r\nxfvliagdmdtsqmurukihpzspfmsyofbrpzydpjjyumgamohhoy\r\n'
+                # b'set UZARBDKKZN 0 0 50 noreply\r\nemonytakkywvnllgfojyivnqnikwgliydjunwgsjdimuxveywb\r\n'
 
-            setCommand = b'set' + b' ' + setKey.encode() + b' ' + b'0' + b' ' + b'0' + b' ' + str(len(setValue)).encode() + (b'' if no_reply == False else b' noreply') + b'\r\n' + setValue.encode() + b'\r\n'
+                setCommand = b'set' + b' ' + setKey.encode() + b' ' + b'0' + b' ' + b'0' + b' ' + str(len(setValue)).encode() + (b'' if no_reply == False else b' noreply') + b'\r\n' + setValue.encode() + b'\r\n'
 
-            clientSocket.sendall(setCommand)
-            response = clientSocket.recv(PAYLOAD_SIZE)
-            if response == b'STORED\r\n':
-                result = True
-            else:
-                result = False
-            
-            end = time.time()
+                clientSocket.sendall(setCommand)
+                response = clientSocket.recv(PAYLOAD_SIZE)
+                if response == b'STORED\r\n':
+                    result = True
+                else:
+                    result = False
+                
+                end = time.time()
 
-            setResultsPerClient.append([setKey,  result, end - start])
+                setResultsPerClient.append([setKey,  result, end - start])
 
-            # print(f'Client: {id} ', result)
-            clientSocket.close()
-            
+                print(f'SET Key: {setKey} Value: {setValue} ', 'STORED\r\n' if result else 'NOT_STORED\r\n')
+                clientSocket.close()
+            except Exception as e:
+                print(e)    
 
         def getFunction(key):
-            
-            start = time.time()
-            
-            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            clientSocket.settimeout(5)
-            clientSocket.connect((CLIENT_HOST, CLIENT_PORT))    
-
-            getCommand = b'get' + b' ' + key.encode() + b'\r\n'
-            
-            clientSocket.sendall(getCommand)
-            response = clientSocket.recv(PAYLOAD_SIZE)
-            
-            if response != b"END\r\n":
-                response = response.decode()
-
-                response = response.split(" ")
-
-                value = b''
-                receivedData = clientSocket.recv(PAYLOAD_SIZE)
-
-                while receivedData != b"END\r\n":
-                    value += receivedData
-                    receivedData = clientSocket.recv(PAYLOAD_SIZE)
-            
-                result = value
-            else:
-                result = None
+            try:
+                start = time.time()
                 
-            end = time.time()
+                clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                clientSocket.settimeout(5)
+                clientSocket.connect((CLIENT_HOST, CLIENT_PORT))    
 
-            getResultsPerClient.append([key,  result, end - start])
-            # print(f'Key: {key} ', result)
+                getCommand = b'get' + b' ' + key.encode() + b'\r\n'
+                
+                clientSocket.sendall(getCommand)
+                response = clientSocket.recv(PAYLOAD_SIZE)
+                
+                if response != b"END\r\n":
+                    response = response.decode()
 
-            clientSocket.close()
+                    response = response.split(" ")
 
+                    value = b''
+                    receivedData = clientSocket.recv(PAYLOAD_SIZE)
+
+                    while receivedData != b"END\r\n":
+                        value += receivedData
+                        receivedData = clientSocket.recv(PAYLOAD_SIZE)
+                
+                    result = value
+                else:
+                    result = None
+                    
+                end = time.time()
+
+                getResultsPerClient.append([key,  result, end - start])
+                
+                print(f'GET Key: {key} Value: {result}' )
+                clientSocket.close()
+            except Exception as e:
+                print(e)
+                
         # Concurrent SET requests
         for i in range(numberOfClients):
             t = threading.Thread(target=setFunction, args=(i, True, ))
@@ -116,6 +119,8 @@ if __name__ == "__main__":
         print('generatedKeys')
         print(generatedKeys)
 
+        
+        print("TEST CASE 1: SET REQUESTS")
         print("-------------------------------------")
         print('setResultsPerClient')
         print(setResultsPerClient)
@@ -132,7 +137,8 @@ if __name__ == "__main__":
         
         for t in threads:
             t.join()
-    
+
+        print("TEST CASE 2: GET REQUESTS")
         print("-------------------------------------")
         print('getResultsPerClient')
         print(getResultsPerClient)
@@ -156,6 +162,7 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
 
+        print("TEST CASE 3: SET AND GET REQUESTS")
         print("-------------------------------------")
         print('setResultsPerClient')
         print(setResultsPerClient)
@@ -179,6 +186,7 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
 
+        print("TEST CASE 4: RANDOM KEY REQUESTS")
         print("-------------------------------------")
         print('getResultsPerClient')
         print(getResultsPerClient)

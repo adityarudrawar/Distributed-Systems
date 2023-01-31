@@ -23,7 +23,7 @@ if __name__ == "__main__":
         
         setResultsPerClient = []
         getResultsPerClient = []
-        numberOfClients = 10
+        numberOfClients = 50
 
         client = None
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
             setResultsPerClient.append([setKey,  result, end - start])
 
-            # print(f'Client: {id} ', result)
+            print(f'SET Key: {setKey} Value: {setValue} ', 'STORED\r\n' if result else 'NOT_STORED\r\n')
             client.close()
             
 
@@ -62,8 +62,8 @@ if __name__ == "__main__":
             end = time.time()
 
             getResultsPerClient.append([key,  result, end - start])
-            # print(f'Key: {key} ', result)
 
+            print(f'GET Key: {key} Value: {result}' )
             client.close()
 
         # Concurrent SET requests
@@ -77,10 +77,12 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
         
+       
         print("-------------------------------------")
         print('generatedKeys')
         print(generatedKeys)
 
+        print("TEST CASE 1: SET REQUESTS")
         print("-------------------------------------")
         print('setResultsPerClient')
         print(setResultsPerClient)
@@ -97,7 +99,8 @@ if __name__ == "__main__":
         
         for t in threads:
             t.join()
-    
+
+        print("TEST CASE 2: GET REQUESTS")
         print("-------------------------------------")
         print('getResultsPerClient')
         print(getResultsPerClient)
@@ -121,6 +124,8 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
 
+        
+        print("TEST CASE 3: SET AND GET REQUESTS")
         print("-------------------------------------")
         print('setResultsPerClient')
         print(setResultsPerClient)
@@ -145,6 +150,7 @@ if __name__ == "__main__":
         for t in threads:
             t.join()
 
+        print("TEST CASE 4: RANDOM KEY REQUESTS")
         print("-------------------------------------")
         print('getResultsPerClient')
         print(getResultsPerClient)
