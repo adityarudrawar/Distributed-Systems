@@ -22,24 +22,18 @@ def writeToFile(key, object):
 
         dataStore[key] = object
 
-        fp = open('data.json', 'w')
-        
-        json.dump(dataStore, fp)
-        
-        fp.close()
-
-        global_lock.release()
+        with open(FILE, 'w') as f:
+            json.dump(dataStore, f)
+            f.close()
 
         return True
     except Exception as e:
-        if fp:
-            fp.close()
-
-        global_lock.release()
-
+        # if fp:
+        #     fp.close()
         print(f"Exception raised while writing to file: {e}")
-
         return False
+    finally:
+        global_lock.release()
 
 def readFromFile(key):
     try:
@@ -48,25 +42,27 @@ def readFromFile(key):
             time.sleep(0.01)
             continue
 
-        fp = open('data.json', 'r')
-        
-        dataStore = json.load(fp)
+        # global_lock.acquire()
+
+        # with open(FILE, 'rb') as f:
+        #     dataStore = json.load(f)
+        #     f.close()
         
         if key not in dataStore:
             return None
 
         obj = dataStore[key]
-        
-        # TODO: Logic for expiry
-        fp.close()
-
         return obj
-    
     except Exception as e:
+        print(e)
         print(f"Exception raised while reading file for key: {key} =>: {e}")
         # pdb.set_trace()
+        # global_lock.release()
+        
         return None
-
+    finally:
+        # global_lock.release()
+        pass
 def recvAll(conn, valueSize):
     
     data = b''
@@ -106,7 +102,6 @@ def setFunction(request, conn, id):
         if noReply:
             conn.sendall(b"STORED\r\n")
     
-        print("setFunction =>",key, flags, expiry, valueSize, noReply, value)
         # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
         object = [
             value,
@@ -146,12 +141,12 @@ def getFunction(request, conn, id):
             conn.sendall(object[0].encode() + b'\r\n' )
         
         conn.sendall(b"END\r\n")
-        print(f"Get request finished for client id: {id}")
     except Exception as e:
         print(f"Exception raised in getFunction for client id: {id}")
         print(e)
 
 if __name__ == "__main__":
+    global global_lock
 
     print("server initialzed")
 
@@ -162,14 +157,15 @@ if __name__ == "__main__":
     SERVER_PORT = int(os.getenv("SERVER_PORT"))
     PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
     
+    FILE = 'data.json'
     # If data.json does not exists or if it exists but is empty
-    if not os.path.isfile('data.json') or os.stat("data.json").st_size == 0:
-        fp = open('data.json', 'w')
+    if not os.path.isfile(FILE) or os.stat(FILE).st_size == 0:
+        fp = open(FILE, 'w')
         json.dump({}, fp)
         dataStore = {}
         fp.close()
     else:
-        fp = open('data.json', 'r')        
+        fp = open(FILE, 'r')        
         dataStore = json.load(fp)
         fp.close()
 
@@ -178,29 +174,28 @@ if __name__ == "__main__":
     serverSocket.bind((SERVER_HOST, SERVER_PORT))
 
     serverSocket.listen()
-    i = 0
+    id = 0
 
     while True:
         conn, addr = serverSocket.accept()
         try:
+            
+            print(addr)
+
             request = conn.recv(PAYLOAD_SIZE)
             
             request = request.decode()
 
             if request[:3] == "set":
-                print("setting new value")
                 threading.Thread(target=setFunction, args=(request, conn, id, )).start()
             elif request[:3] == "get":
-                print("getting new value")
                 threading.Thread(target=getFunction, args=(request, conn, id, )).start()
             else:
                 print("Invalid command")
         except Exception as e:
             print(f"Exception raised while connecting to client id: {id}")
             print(e)
-
-        print("new client connected: ",i)
         
-        i += 1
+        id += 1
         
     serverSocket.shutdown(socket.SHUT_RDWR)
