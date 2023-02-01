@@ -5,22 +5,23 @@ import threading
 import time
 import json
 import pdb
-import datetime
+from datetime import datetime
 import time
 import os
+import random
+import pytz
 
-def keyIsValid(key):
-    pass
+def isKeyValid(key):
+    return key.isalnum()
 
 def writeToFile(key, object):
     try:
-        while global_lock.locked():
-            time.sleep(0.01)
-            continue
-
-        global_lock.acquire()
+        global_lock.acquire(True)
 
         dataStore[key] = object
+        
+        # random sleep before writing
+        time.sleep(random.choice([0.001, 0.002, 0.05, 0.07]))
 
         with open(FILE, 'w') as f:
             json.dump(dataStore, f)
@@ -28,8 +29,6 @@ def writeToFile(key, object):
 
         return True
     except Exception as e:
-        # if fp:
-        #     fp.close()
         print(f"Exception raised while writing to file: {e}")
         return False
     finally:
@@ -37,39 +36,27 @@ def writeToFile(key, object):
 
 def readFromFile(key):
     try:
-
         while global_lock.locked():
             time.sleep(0.01)
             continue
 
-        # global_lock.acquire()
-
-        # with open(FILE, 'rb') as f:
-        #     dataStore = json.load(f)
-        #     f.close()
-        
         if key not in dataStore:
             return None
+        
+        # random sleep before reading
+        time.sleep(random.choice([0.001, 0.002, 0.05, 0.07]))
 
         obj = dataStore[key]
         return obj
     except Exception as e:
         print(e)
         print(f"Exception raised while reading file for key: {key} =>: {e}")
-        # pdb.set_trace()
-        # global_lock.release()
-        
         return None
-    finally:
-        # global_lock.release()
-        pass
 
 def recvAll(conn, valueSize):
     
-    data = b''
-    
+    data = b''    
     while True:
-
         chunk = conn.recv(PAYLOAD_SIZE)
         data += chunk
         if len(data) >= valueSize: 
@@ -91,36 +78,42 @@ def setFunction(request, conn, id):
         flags = before[2]
         expiry = before[3]
         
-        if len(before) <= 5:
-            noReply = False
-            valueSize = int(before[4].split("\r\n")[0])
-            value = after[:valueSize]
-        else:
-            noReply = True
-            valueSize = int(before[4])
-            value = after[:valueSize]
-        
-        if noReply:
-            conn.sendall(b"STORED\r\n")
-    
-        # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
-        object = [
-            value,
-            valueSize,
-            flags,
-            expiry,
-            noReply
-        ]
+        if isKeyValid(key):
+            if len(before) <= 5:
+                noReply = False
+                valueSize = int(before[4].split("\r\n")[0])
+                value = after[:valueSize]
+            else:
+                noReply = True
+                valueSize = int(before[4])
+                value = after[:valueSize]
+            
+            if valueSize != len(value):
+                raise Exception
 
-        response = b''
-
-        if writeToFile(key, object):
-            response = b"STORED\r\n"
-        else:
-            response = b"NOT_STORED\r\n"
+            if noReply:
+                conn.sendall(b"STORED\r\n")
         
-        if not noReply:
-            conn.sendall(response)
+            # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
+            object = [
+                value,
+                valueSize,
+                flags,
+                expiry,
+                noReply
+            ]
+
+            response = b''
+
+            if writeToFile(key, object):
+                response = b"STORED\r\n"
+            else:
+                response = b"NOT_STORED\r\n"
+            
+            if not noReply:
+                conn.sendall(response)
+        else:
+            conn.sendall(b"NOT_STORED\r\n")
     except Exception as e:
         print("Exception raised in setFunction")
         print(e)
@@ -132,8 +125,7 @@ def getFunction(request, conn, id):
 
         object = readFromFile(key)
 
-         # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
-
+        # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
         if object != None:
             # VALUE flags valueSize\r\n
             # value\r\n
@@ -178,11 +170,9 @@ if __name__ == "__main__":
     id = 0
 
     while True:
-        conn, addr = serverSocket.accept()
         try:
-            
-            print(addr)
-
+            conn, addr = serverSocket.accept()
+    
             request = conn.recv(PAYLOAD_SIZE)
             
             request = request.decode()
@@ -192,7 +182,7 @@ if __name__ == "__main__":
             elif request[:3] == "get":
                 threading.Thread(target=getFunction, args=(request, conn, id, )).start()
             else:
-                print("Invalid command")
+                conn.sendall(b"INVALID_COMMAND\r\n")
         except Exception as e:
             print(f"Exception raised while connecting to client id: {id}")
             print(e)
