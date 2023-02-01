@@ -7,6 +7,30 @@ import string
 import threading
 import pdb
 from pymemcache.client.base import Client
+import matplotlib.pyplot as plt
+
+def calculateAverageTime(array, index):
+    totalTime = 0
+
+    for record in array:
+        totalTime += record[index]
+    avgTime = totalTime/len(array)
+
+    return avgTime
+
+def startAndWaitForThreads(threadArray):
+    for t in threadArray:
+        t.start()
+    
+    for t in threadArray:
+        t.join()
+
+def plotGraph(x, y, x_axis= "X-axis", y_axis= "Y-axis", title= ""):
+    plt.plot(x, y)
+    plt.xlabel(x_axis)
+    plt.ylabel(y_axis)
+    plt.title(title)
+    plt.show()
 
 if __name__ == "__main__":
     try:
@@ -18,142 +42,149 @@ if __name__ == "__main__":
         CLIENT_PORT = int(os.getenv("CLIENT_PORT"))
         PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
 
-        threads = []
-        generatedKeys = []
-        
-        setResultsPerClient = []
-        getResultsPerClient = []
-        numberOfClients = 50
+        setAverageTime = []
+        getAverageTime = []
+        setGetAverageTime = []
 
-        client = None
+        noOfClients = [50, 100, 150, 200, 250, 300, 350, 400]
 
-        def setFunction(id, flag):
+        for i in noOfClients:
+            threads = []
+            generatedKeys = []
             
-            if flag:
-                setKey = ''.join(random.choices(string.ascii_uppercase, k=10))
-                generatedKeys.append(setKey)
-            else:
-                setKey = generatedKeys[id]
+            setResultsPerClient = []
+            getResultsPerClient = []
+            numberOfClients = i
 
-            setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
+            client = None
+
+            def setFunction(id, flag):
+                
+                if flag:
+                    setKey = ''.join(random.choices(string.ascii_uppercase, k=10))
+                    generatedKeys.append(setKey)
+                else:
+                    setKey = generatedKeys[id]
+
+                setValue = ''.join(random.choices(string.ascii_lowercase, k=50))
+                
+                no_reply = random.choice([False, True])
+                
+                start = time.time()
+                
+                client = Client(CLIENT_HOST + ":" + str(CLIENT_PORT), default_noreply= no_reply)
+                result = client.set(setKey, setValue)
+
+                end = time.time()
+
+                setResultsPerClient.append([setKey,  result, end - start])
+
+                # print(f'SET Key: {setKey} Value: {setValue} ', 'STORED\r\n' if result else 'NOT_STORED\r\n')
+                client.close()
+                
+
+            def getFunction(key):
+                
+                start = time.time()
+
+                client = Client(CLIENT_HOST + ":" + str(CLIENT_PORT))
+                result = client.get(key)            
+                
+                end = time.time()
+
+                getResultsPerClient.append([key,  result, end - start])
+
+                # print(f'GET Key: {key} Value: {result}' )
+                client.close()
+
+            # Concurrent SET requests
+            for i in range(numberOfClients):
+                t = threading.Thread(target=setFunction, args=(i, True, ))
+                threads.append(t)
             
-            no_reply = random.choice([False, True])
+            # Start and Wait
+            startAndWaitForThreads(threads)
+        
+            # print("-------------------------------------")
+            # print('generatedKeys')
+            # print(generatedKeys)
+
+            # print("TEST CASE 1: SET REQUESTS")
+            # print("-------------------------------------")
+            # print('setResultsPerClient')
+            # print(setResultsPerClient)
+
+            setAverageTime.append(calculateAverageTime(setResultsPerClient, 2))
+
+            threads = []
+
+            # Concurrent GET requests
+            for i in range(numberOfClients):
+                t = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
+                threads.append(t)
+
+            # Start and Wait
+            startAndWaitForThreads(threads)
+
+            # print("TEST CASE 2: GET REQUESTS")
+            # print("-------------------------------------")
+            # print('getResultsPerClient')
+            # print(getResultsPerClient)
             
-            start = time.time()
+            getAverageTime.append(calculateAverageTime(getResultsPerClient, 2))
+
+            threads = []
+            setResultsPerClient = []
+            getResultsPerClient = []
+
+            for i in range(numberOfClients):
+                t1 = threading.Thread(target=setFunction, args=(i, False, ))
+                threads.append(t1)
+
+                t2 = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
+                threads.append(t2)
+
+            random.shuffle(threads)
+
+            # Start and Wait
+            startAndWaitForThreads(threads)
             
-            client = Client(CLIENT_HOST + ":" + str(CLIENT_PORT), default_noreply= no_reply)
-            result = client.set(setKey, setValue)
 
-            end = time.time()
+            # print("TEST CASE 3: SET AND GET REQUESTS")
+            # print("-------------------------------------")
+            # print('setResultsPerClient')
+            # print(setResultsPerClient)
 
-            setResultsPerClient.append([setKey,  result, end - start])
-
-            print(f'SET Key: {setKey} Value: {setValue} ', 'STORED\r\n' if result else 'NOT_STORED\r\n')
-            client.close()
+            # print("-------------------------------------")
+            # print('getResultsPerClient')
+            # print(getResultsPerClient)
             
+            setGetAverageTime.append((calculateAverageTime(getResultsPerClient, 2) + calculateAverageTime(setResultsPerClient, 2) )/ 2)
 
-        def getFunction(key):
+            threads = []
+            getResultsPerClient = []
+
+            randomKeys = [''.join(random.choices(string.ascii_uppercase, k=10)) for _ in range(numberOfClients)]
+
+            for i in range(numberOfClients):
+                t = threading.Thread(target=getFunction, args=(randomKeys[i],))
+                threads.append(t)
             
-            start = time.time()
+            # Start and Wait
+            startAndWaitForThreads(threads)
 
-            client = Client(CLIENT_HOST + ":" + str(CLIENT_PORT))
-            result = client.get(key)            
-            
-            end = time.time()
+            # print("TEST CASE 4: RANDOM KEY REQUESTS")
+            # print("-------------------------------------")
+            # print('getResultsPerClient')
+            # print(getResultsPerClient)
 
-            getResultsPerClient.append([key,  result, end - start])
+            print("done")
 
-            print(f'GET Key: {key} Value: {result}' )
-            client.close()
-
-        # Concurrent SET requests
-        for i in range(numberOfClients):
-            t = threading.Thread(target=setFunction, args=(i, True, ))
-            threads.append(t)
+        plotGraph(noOfClients, setAverageTime, "AVG SET request time", "Time", "CONCURRENT SET REQUEST")
         
-        for t in threads:
-            t.start()
+        plotGraph(noOfClients, getAverageTime, "AVG GET request time", "Time", "CONCURRENT GET REQUEST")
         
-        for t in threads:
-            t.join()
-        
-       
-        print("-------------------------------------")
-        print('generatedKeys')
-        print(generatedKeys)
-
-        print("TEST CASE 1: SET REQUESTS")
-        print("-------------------------------------")
-        print('setResultsPerClient')
-        print(setResultsPerClient)
-
-        threads = []
-
-        # Concurrent GET requests
-        for i in range(numberOfClients):
-            t = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
-            threads.append(t)
-
-        for t in threads:
-            t.start()
-        
-        for t in threads:
-            t.join()
-
-        print("TEST CASE 2: GET REQUESTS")
-        print("-------------------------------------")
-        print('getResultsPerClient')
-        print(getResultsPerClient)
-
-        threads = []
-        setResultsPerClient = []
-        getResultsPerClient = []
-
-        for i in range(numberOfClients):
-            t1 = threading.Thread(target=setFunction, args=(i, False, ))
-            threads.append(t1)
-
-            t2 = threading.Thread(target=getFunction, args=(generatedKeys[i], ))
-            threads.append(t2)
-
-        random.shuffle(threads)
-
-        for t in threads:
-            t.start()
-        
-        for t in threads:
-            t.join()
-
-        
-        print("TEST CASE 3: SET AND GET REQUESTS")
-        print("-------------------------------------")
-        print('setResultsPerClient')
-        print(setResultsPerClient)
-
-        print("-------------------------------------")
-        print('getResultsPerClient')
-        print(getResultsPerClient)
-
-
-        threads = []
-        getResultsPerClient = []
-
-        randomKeys = [''.join(random.choices(string.ascii_uppercase, k=10)) for _ in range(numberOfClients)]
-
-        for i in range(numberOfClients):
-            t = threading.Thread(target=getFunction, args=(randomKeys[i],))
-            threads.append(t)
-        
-        for t in threads:
-            t.start()
-        
-        for t in threads:
-            t.join()
-
-        print("TEST CASE 4: RANDOM KEY REQUESTS")
-        print("-------------------------------------")
-        print('getResultsPerClient')
-        print(getResultsPerClient)
+        plotGraph(noOfClients, setGetAverageTime, "AVG SET AND GET request time", "Time", "CONCURRENT SET AND GET REQUEST")
 
     except Exception as e:
         print(e)
