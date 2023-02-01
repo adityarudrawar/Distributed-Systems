@@ -18,6 +18,58 @@ if __name__ == "__main__":
         CLIENT_PORT = int(os.getenv("CLIENT_PORT"))
         PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
 
+
+        def validChecks():
+            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # clientSocket.settimeout(5)
+            clientSocket.connect((CLIENT_HOST, CLIENT_PORT)) 
+            
+            setKey = '@GJ0_'
+            setValue = 'Value_1'
+            no_reply = False
+            setCommand = b'set' + b' ' + setKey.encode() + b' ' + b'0' + b' ' + b'0' + b' ' + str(len(setValue)).encode() + (b'' if no_reply == False else b' noreply') + b'\r\n' + setValue.encode() + b'\r\n'
+            clientSocket.sendall(setCommand)
+            response = clientSocket.recv(PAYLOAD_SIZE)
+
+            print("Response for Invalid key", response)
+
+            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # clientSocket.settimeout(5)
+            clientSocket.connect((CLIENT_HOST, CLIENT_PORT)) 
+            
+            clientSocket.sendall(b'carry 10\r\n')
+            response = clientSocket.recv(PAYLOAD_SIZE)
+
+            print("Response for Invalid command", response)
+
+            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # clientSocket.settimeout(5)
+            clientSocket.connect((CLIENT_HOST, CLIENT_PORT)) 
+            
+            setKey = 'Key_1'
+            setValue = 'Value_1'
+            no_reply = False
+            setCommand = b'set' + b' ' + setKey.encode() + b' ' + b'0' + b' ' + b'0' + b' ' + str(len(setValue) + 2).encode() + (b'' if no_reply == False else b' noreply') + b'\r\n' + setValue.encode() + b'\r\n'
+            clientSocket.sendall(setCommand)
+            response = clientSocket.recv(PAYLOAD_SIZE)
+
+            print("Response for Invalid length of value", response)
+
+            clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # clientSocket.settimeout(5)
+            clientSocket.connect((CLIENT_HOST, CLIENT_PORT)) 
+            
+            key = 'Key1'
+            getCommand = b'get' + b' ' + key.encode() + b'\r\n'    
+            clientSocket.sendall(getCommand)
+            response = clientSocket.recv(PAYLOAD_SIZE)
+        
+            print("Response for key not present in KV Store", response)
+                
+        validChecks()
+
+        print("TEST CASES START")
+
         threads = []
         generatedKeys = []
         
@@ -191,6 +243,6 @@ if __name__ == "__main__":
         print('getResultsPerClient')
         print(getResultsPerClient)
 
-
+        
     except Exception as e:
         print(e)
