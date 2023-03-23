@@ -1,13 +1,13 @@
 import socket
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import time
 import random
 import string
 import threading
-import pdb
+# import pdb
 from pymemcache.client.base import Client
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def calculateAverageTime(array, index):
     totalTime = 0
@@ -36,11 +36,20 @@ if __name__ == "__main__":
     try:
         print("client intialized")
 
-        load_dotenv()
+        # load_dotenv()
 
-        CLIENT_HOST = os.getenv("CLIENT_HOST")
-        CLIENT_PORT = int(os.getenv("CLIENT_PORT"))
-        PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
+        # CLIENT_HOST = os.getenv("CLIENT_HOST")
+        # CLIENT_PORT = int(os.getenv("CLIENT_PORT"))
+        # PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
+
+        try:
+            client = Client("127.0.0.1:65432", default_noreply= True, encoding="utf8")
+            # print(client.set("mapper_task_output_3","k1"))
+            print(client.get("mapper_task_output_2"))
+            client.close()
+        except Exception as e:
+            print(e)
+        exit()
 
         setAverageTime = []
         getAverageTime = []
