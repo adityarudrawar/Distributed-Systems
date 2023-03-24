@@ -1,119 +1,97 @@
 import socket
 import os
-from dotenv import load_dotenv
+import configparser
 import threading
-import time
 import json
-import pdb
-from datetime import datetime
-import time
 import os
-import random
-import pytz
-
-def isKeyValid(key):
-    return key.isalnum()
 
 def writeToFile(key, object):
     try:
-        global_lock.acquire(True)
 
-        dataStore[key] = object
-        
-        # random sleep before writing
-        time.sleep(random.choice([0.001, 0.002, 0.05, 0.07]))
-
-        with open(FILE, 'w') as f:
-            json.dump(dataStore, f)
+        with open(storagePath + "\\" + key, 'w+', encoding='utf8') as f:
+            f.write(json.dumps({"value": object}, ensure_ascii=False))
             f.close()
+
 
         return True
     except Exception as e:
         print(f"Exception raised while writing to file: {e}")
         return False
-    finally:
-        global_lock.release()
 
 def readFromFile(key):
     try:
-        while global_lock.locked():
-            time.sleep(0.01)
-            continue
-
-        if key not in dataStore:
+        if not os.path.exists(storagePath + "\\" + key):
             return None
         
-        # random sleep before reading
-        time.sleep(random.choice([0.001, 0.002, 0.05, 0.07]))
-
-        obj = dataStore[key]
-        return obj
+        f = open(storagePath + "\\" + key, 'r', encoding='utf8')
+        obj = json.load(f)
+        f.close()
+        return obj["value"]
+        
     except Exception as e:
         print(e)
         print(f"Exception raised while reading file for key: {key} =>: {e}")
         return None
 
-def recvAll(conn, valueSize):
-    
-    data = b''    
-    while True:
-        chunk = conn.recv(PAYLOAD_SIZE)
-        data += chunk
-        if len(data) >= valueSize: 
-            # When the total data received becomes greater than the valueSize 
-            # indicates this was the last chunk as it had extra size of 5 of ' \r\n'
-            break
-    
-    return data.decode()
 
 def setFunction(request, conn, id):
 
     try:
         tokenPos = request.find('\r\n')
         
-        before, after = request[:tokenPos], request[tokenPos + 2 :]
+        commandList = request.split('\r\n')
+        # Tru splitting it on \r\n
+        
+
+        # before, after = request[:tokenPos], request[tokenPos + 2 :]
+        before = commandList[0]
+        after = commandList[1]
+        
         before = before.split(" ")
 
         key = before[1]
         flags = before[2]
         expiry = before[3]
         
-        if isKeyValid(key):
-            if len(before) <= 5:
-                noReply = False
-                valueSize = int(before[4].split("\r\n")[0])
-                value = after[:valueSize]
-            else:
-                noReply = True
-                valueSize = int(before[4])
-                value = after[:valueSize]
-            
-            if valueSize != len(value):
-                raise Exception
-
-            if noReply:
-                conn.sendall(b"STORED\r\n")
         
-            # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
-            object = [
-                value,
-                valueSize,
-                flags,
-                expiry,
-                noReply
-            ]
 
-            response = b''
-
-            if writeToFile(key, object):
-                response = b"STORED\r\n"
-            else:
-                response = b"NOT_STORED\r\n"
-            
-            if not noReply:
-                conn.sendall(response)
+        if len(before) <= 5:
+            noReply = False
+            valueSize = int(before[4].split("\r\n")[0])
+            value = after
         else:
-            conn.sendall(b"NOT_STORED\r\n")
+            noReply = True
+            valueSize = int(before[4])
+            value = after
+        
+        # if valueSize != len(value):
+        #     raise Exception
+
+        if noReply:
+            conn.sendall(b"STORED\r\n")
+    
+        # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
+        object = [
+            value,
+            valueSize,
+            flags,
+            expiry,
+            noReply
+        ]
+
+        response = b''
+
+        if "mapper_task_output_" in key:
+            pass
+
+        # if writeToFile(key, object):
+        if writeToFile(key, value):
+            response = b"STORED\r\n"
+        else:
+            response = b"NOT_STORED\r\n"
+        
+        if not noReply:
+            conn.sendall(response)
     except Exception as e:
         print("Exception raised in setFunction")
         print(e)
@@ -129,38 +107,45 @@ def getFunction(request, conn, id):
         if object != None:
             # VALUE flags valueSize\r\n
             # value\r\n
-            cmd = b'VALUE' + b' ' + key.encode() + b' ' + str(object[2]).encode() + b' ' + str(object[1]).encode() + b'\r\n'
-            conn.sendall(cmd)
-            conn.sendall(object[0].encode() + b'\r\n' )
+            if 'mapper_task_output' in key:
+                pass
+            cmd = 'VALUE' + ' ' + key + ' ' + str(0) + ' ' + str(len(object.encode('utf8'))) + '\r\n'
+            conn.send(cmd.encode('utf8'))
+            conn.send( "{}\r\n".format(object).encode('utf8')  )
         
-        conn.sendall(b"END\r\n")
+        conn.send("END\r\n".encode('utf8'))
     except Exception as e:
         print(f"Exception raised in getFunction for client id: {id}")
         print(e)
 
+def recvAll(conn):
+    BUFF_SIZE = 1024
+    data = b''    
+    while True:
+        part = conn.recv(BUFF_SIZE)
+        data += part
+        if len(part) < BUFF_SIZE:
+            # either 0 or end of data
+            break
+    return data
+    
+
+
 if __name__ == "__main__":
-    global global_lock
+    global storagePath
 
     print("server initialzed")
 
-    load_dotenv()
-    global_lock = threading.Lock()
+    config = configparser.ConfigParser()
+    config.read('.env')
 
-    SERVER_HOST = os.getenv("SERVER_HOST")
-    SERVER_PORT = int(os.getenv("SERVER_PORT"))
-    PAYLOAD_SIZE = int(os.getenv("PAYLOAD_SIZE"))
-    
-    FILE = 'data.json'
-    # If data.json does not exists or if it exists but is empty
-    if not os.path.isfile(FILE) or os.stat(FILE).st_size == 0:
-        fp = open(FILE, 'w')
-        json.dump({}, fp)
-        dataStore = {}
-        fp.close()
-    else:
-        fp = open(FILE, 'r')        
-        dataStore = json.load(fp)
-        fp.close()
+    SERVER_HOST = config["TEST"]["KEYVALUE_SERVER_HOST"]
+    SERVER_PORT = int(config["TEST"]["KEYVALUE_SERVER_PORT"])
+    PAYLOAD_SIZE = int(config["TEST"]["KEYVALUE_PAYLOAD_SIZE"])
+    storagePath = config["TEST"]["KEYVALUE_STORAGE_PATH"]
+
+    if not os.path.exists(storagePath):
+        os.makedirs(storagePath)
 
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -173,9 +158,9 @@ if __name__ == "__main__":
         try:
             conn, addr = serverSocket.accept()
     
-            request = conn.recv(PAYLOAD_SIZE)
+            request = recvAll(conn)
             
-            request = request.decode()
+            request = request.decode('utf8')
 
             if request[:3] == "set":
                 threading.Thread(target=setFunction, args=(request, conn, id, )).start()
