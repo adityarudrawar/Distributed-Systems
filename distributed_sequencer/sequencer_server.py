@@ -81,7 +81,7 @@ class SequencerServer(Process):
                 elif "id" in request:
                     # Update the id by acquiring a mutex lock
                     id = int(request.split(" ")[1])
-                    self.state = id
+                    self.state = max(self.state, id)
                 else:
                     conn.send(b"Invalid request\r\n")
             except Exception as e:

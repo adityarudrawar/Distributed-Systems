@@ -162,8 +162,6 @@ if __name__ == "__main__":
     for t in threads:
         t.join()
 
-    # test_result.sort(key= lambda x:x[0])
-
     test_result = list(test_result)
     test_result = sorted(test_result, key = lambda x: x[1])
 
