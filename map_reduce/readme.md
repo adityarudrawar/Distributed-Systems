@@ -31,7 +31,7 @@
 2. Only using network-based communication.
 3. File split is based on the size mentioned by the user, it takes the size and divides the file into chunk of almost that size. It makes sure it is not cutting any word in half, wether it be ascii or unicode, so that case is handled.
 
-![alt text](C:\Users\adiru\Downloads\map_reduce.png)
+![map_reduce](https://user-images.githubusercontent.com/30310911/227399881-a8209478-5abf-4615-a610-8afd56530cd8.png)
 
 #### IMPLEMENTATION
 
