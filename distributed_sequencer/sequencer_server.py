@@ -49,6 +49,7 @@ class SequencerServer(Process):
                 raise Exception
 
             uid = int(response.split(" ")[1])
+            self.state = uid
             message = b"" + str(uid).encode('utf8')
 
             conn.send(message)            
