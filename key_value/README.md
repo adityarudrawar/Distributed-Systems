@@ -1,6 +1,5 @@
-## Constraints
+## Instructions
 
-##### Instructions
 Install the required modules from requirements.txt by running the command 
 ```
 pip install -r requirements.txt
