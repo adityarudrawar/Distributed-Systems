@@ -7,12 +7,12 @@ import socket
 # Sequential Local read, write is TOB [No master is required]
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     PAYLOAD_SIZE = 4096
 
-    kvs = kvstore.KVStore( 
-        consistency= 'linearizable_consistency',
-        replicas = 3,
+    kvs = kvstore.KVStore(
+        consistency='linearizable_consistency',
+        replicas=3,
         storage_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\storage\key_value'
     )
 
@@ -24,8 +24,8 @@ if __name__=="__main__":
 
     # Connect to a client
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    clientSocket.connect(server_addresses[0]) 
-    
+    clientSocket.connect(server_addresses[0])
+
     setKey = '@GJ0_'
     setValue = 'Value_1'
     no_reply = False
@@ -37,9 +37,9 @@ if __name__=="__main__":
     clientSocket.close()
 
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    clientSocket.connect(server_addresses[0]) 
-    
-    print('get key request')    
+    clientSocket.connect(server_addresses[0])
+
+    print('get key request')
     getKey = '@GJ0_'
     getCommand = b'get' + b' ' + setKey.encode() + b'\r\n'
     clientSocket.sendall(getCommand)
@@ -47,5 +47,3 @@ if __name__=="__main__":
 
     print("Response for get key", response)
     clientSocket.close()
-
-
