@@ -19,6 +19,7 @@ READY = 'READY'
 SENT = 'SENT'
 RECV = 'RECV'
 
+REQ_TYPE = 'req_type'
 
 PAYLOAD_SIZE = 4096
 
@@ -99,7 +100,7 @@ class Controlet(Process):
         req_id = self.__getUniqueId()
 
         self._map[req_id] = {STATUS_KEY: SENT,
-                             KEY_KEY: key, VALUE_KEY: value, NUM_ACK_KEY: 0, 'conn': conn, 'req': 'set', REQ_FROM_KEY: 'client'}
+                             KEY_KEY: key, VALUE_KEY: value, NUM_ACK_KEY: 0, 'conn': conn, REQ_TYPE: 'set', REQ_FROM_KEY: 'client'}
 
         # Add to queue : [clock, req_id]
         self.__appendToQueue(
@@ -123,7 +124,7 @@ class Controlet(Process):
         self.__incrementCounter()
 
         self._map[req_id] = {STATUS_KEY: SENT,
-                             KEY_KEY: key, NUM_ACK_KEY: 0, 'conn': conn, 'req': 'set', REQ_FROM_KEY: 'client'}
+                             KEY_KEY: key, NUM_ACK_KEY: 0, 'conn': conn, REQ_TYPE: 'get', REQ_FROM_KEY: 'client'}
 
         logical_clock = str(self.__getClock())
 
@@ -140,22 +141,26 @@ class Controlet(Process):
 
         # Broadcast to all other servers
 
-    def __setKey(self, conn, key, value):
+    def __setKey(self, key, value, conn=None):
         '''
         Sends the key value to the datalet
         '''
         c = Client(self.node_datalet)
         response = c.set(key, value)
-        conn.sendall(str(response).encode('utf8'))
+        if conn != None:
+            conn.sendall(str(response).encode('utf8'))
         c.close()
 
-    def __getKey(self, conn, key):
+    def __getKey(self, key, conn=None):
         '''
         Gets the value from the datalet
         '''
         c = Client(self.node_datalet)
         reponse = c.get(key)
-        conn.sendall(reponse)
+
+        if conn != None:
+            conn.sendall(reponse)
+
         c.close()
 
     def __createMessage(self, params):
@@ -188,7 +193,7 @@ class Controlet(Process):
                     f"Exception in _handleReq {self.id} msg: {msg} message already exists")
 
             self._map[req_id] = {STATUS_KEY: RECV,
-                                 KEY_KEY: key, VALUE_KEY: value, 'req': msg, REQ_FROM_KEY: 'server'}
+                                 KEY_KEY: key, VALUE_KEY: value, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
 
             # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
@@ -203,7 +208,7 @@ class Controlet(Process):
                     f"Exception in _handleReq {self.id} msg: {msg} message already exists")
 
             self._map[req_id] = {STATUS_KEY: RECV,
-                                 KEY_KEY: key, 'req': msg, REQ_FROM_KEY: 'server'}
+                                 KEY_KEY: key, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
 
             # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
@@ -275,6 +280,10 @@ class Controlet(Process):
                 request = self._map.pop(process_req_id, None)
 
                 print(f"processing on {self.id}: {process_req} : {request}")
+
+                conn = None
+                if request[REQ_FROM_KEY] == 'client':
+                    conn = request['conn']
 
                 self.__order.append(
                     f"{process_req_id}")
