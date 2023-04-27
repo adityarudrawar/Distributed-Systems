@@ -40,7 +40,6 @@ class Controlet(Process):
         self.node_datalet = datalets[id]
 
         self.queue = []
-        # self.sorting_lambda = lambda x: (x[0][0], x[0][1])
 
         self.other_datalets = datalets[:id] + datalets[id + 1:]
         self.__controlets = controlets
@@ -102,23 +101,15 @@ class Controlet(Process):
         self._map[req_id] = {STATUS_KEY: SENT,
                              KEY_KEY: key, VALUE_KEY: value, NUM_ACK_KEY: 0, 'conn': conn, REQ_TYPE: 'set', REQ_FROM_KEY: 'client'}
 
-        # Add to queue : [clock, req_id]
         self.__appendToQueue(
             [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
 
         message = self.__createMessage(
             ['req', req_id, logical_clock, 'set', key, value])
 
-        # Broadcast to other controlets
         self.__broadcastMessage(message)
 
     def __handleClientGet(self, conn, key):
-        # Increment clock
-        # Generate a request id
-        # Add the request to queue with the conn and the request id.
-        # Broadcast the request
-
-        # A seperate thread for queue operations?
         req_id = self.__getUniqueId()
 
         self.__incrementCounter()
@@ -132,14 +123,10 @@ class Controlet(Process):
             [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
 
         # TODO: better the key value size split that is not with a " ". This will cause a lot of errors in the future
-
-        # Broadcast to other controlets
         message = self.__createMessage(
             ['req', req_id, logical_clock, 'get', key])
 
         self.__broadcastMessage(message)
-
-        # Broadcast to all other servers
 
     def __setKey(self, key, value, conn=None):
         '''
@@ -197,11 +184,9 @@ class Controlet(Process):
             self._map[req_id] = {STATUS_KEY: RECV,
                                  KEY_KEY: key, VALUE_KEY: value, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
 
-            # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
                 [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
 
-            # Ack is sent when the msg is at the head of the queue
         elif msg == "get":
             key = split_req[4]
 
@@ -212,7 +197,6 @@ class Controlet(Process):
             self._map[req_id] = {STATUS_KEY: RECV,
                                  KEY_KEY: key, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
 
-            # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
                 [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
 
@@ -227,8 +211,6 @@ class Controlet(Process):
         print("handle queue itself")
         while True:
             time.sleep(0.001)
-            # print(f"queue: {self.id}: {self.queue}: {self._map}")
-            # print("order ", self.id, "  ", self.__order)
 
             if not self.queue:
 
