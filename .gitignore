@@ -4,3 +4,6 @@ map_reduce/__pycache__/master.cpython-310.pyc
 map_reduce/__pycache__/reducer.cpython-310.pyc
 map_reduce/__pycache__/task.cpython-310.pyc
 map_reduce/__pycache__/utilities.cpython-310.pyc
+distributed_sequencer.zip
+distributed_key_value/.vscode/settings.json
+distributed_sequencer/Distributed Sequencer.pdf
