@@ -146,8 +146,18 @@ class Controlet(Process):
         '''
         c = Client(self.node_datalet)
         response = c.get(key)
+        print(f"response {self.id}", response)
         if conn != None:
-            conn.sendall(response)
+            # Do I need to do the same thing for SET?
+            if response != None:
+                response  = response.decode('utf8')
+
+                cmd = 'VALUE' + ' ' + key + ' ' + str(0) + ' ' + str(len(response.encode('utf8'))) + '\r\n'
+                conn.send(cmd.encode('utf8'))
+                conn.send("{}\r\n".format(response).encode('utf8'))
+
+            conn.send("END\r\n".encode('utf8'))
+
         c.close()
 
         return response
@@ -218,7 +228,7 @@ class Controlet(Process):
                     for item in self.__order:
                         f.write(item + "\n")
                     f.write("file written to : " + str(self.id))
-                print("COMPLETE")
+                # print("COMPLETE")
                 continue
 
             QUEUE_LOCK.acquire()
@@ -277,9 +287,12 @@ class Controlet(Process):
 
                     print("set request", key, value)
                     response = self.__setKey(key, value, conn)
+                    print(f"set request {self.id}, key {key} value {value} respone {response}")
+
                 if request[REQ_TYPE] == 'get':
-                    print("get request", key)
+                    print(f"get request {self.id}", key)
                     response = self.__getKey(key, conn)
+                    print(f"get request {self.id}, key {key} respone {response}")
 
                 self.__order.append(
                     f"{process_req_id} {request[REQ_TYPE]} {response}")
