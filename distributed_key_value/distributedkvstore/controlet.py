@@ -155,11 +155,11 @@ class Controlet(Process):
         if conn != None:
             # Do I need to do the same thing for SET?
             if response != None:
-                response  = response.decode('utf8')
+                conn_response  = response.decode('utf8')
 
-                cmd = 'VALUE' + ' ' + key + ' ' + str(0) + ' ' + str(len(response.encode('utf8'))) + '\r\n'
+                cmd = 'VALUE' + ' ' + key + ' ' + str(0) + ' ' + str(len(conn_response.encode('utf8'))) + '\r\n'
                 conn.send(cmd.encode('utf8'))
-                conn.send("{}\r\n".format(response).encode('utf8'))
+                conn.send("{}\r\n".format(conn_response).encode('utf8'))
 
             conn.send("END\r\n".encode('utf8'))
 
