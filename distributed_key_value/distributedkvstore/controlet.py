@@ -135,7 +135,7 @@ class Controlet(Process):
 
         # Broadcast to other controlets
         message = self.__createMessage(
-            ['req', req_id, logical_clock, 'set', key])
+            ['req', req_id, logical_clock, 'get', key])
 
         self.__broadcastMessage(message)
 
@@ -151,17 +151,19 @@ class Controlet(Process):
             conn.sendall(str(response).encode('utf8'))
         c.close()
 
+        return response
+
     def __getKey(self, key, conn=None):
         '''
         Gets the value from the datalet
         '''
         c = Client(self.node_datalet)
-        reponse = c.get(key)
-
+        response = c.get(key)
         if conn != None:
-            conn.sendall(reponse)
-
+            conn.sendall(response)
         c.close()
+
+        return response
 
     def __createMessage(self, params):
         if len(params) < 4:
@@ -212,7 +214,7 @@ class Controlet(Process):
 
             # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
-                [[int(logical_clock.split["."][0]), int(logical_clock.split["."][1])], req_id])
+                [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
 
         # For the original sender
         elif msg == "ack":
@@ -285,8 +287,20 @@ class Controlet(Process):
                 if request[REQ_FROM_KEY] == 'client':
                     conn = request['conn']
 
+                key = request[KEY_KEY]
+                response = ""
+
+                if request[REQ_TYPE] == 'set':
+                    value = request[VALUE_KEY]
+
+                    print("set request", key, value)
+                    response = self.__setKey(key, value, conn)
+                if request[REQ_TYPE] == 'get':
+                    print("get request", key)
+                    response = self.__getKey(key, conn)
+
                 self.__order.append(
-                    f"{process_req_id}")
+                    f"{process_req_id} {request[REQ_TYPE]} {response}")
             QUEUE_LOCK.release()
 
     def run(self):
