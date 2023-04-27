@@ -1,10 +1,30 @@
 from distributedkvstore import kvstore
 from pymemcache.client.base import Client
 import socket
+import time
+import random
+import string
+import threading
 
 # Eventual Local Read, writes to anyserver with asynchronous broadcast to every one else with a logical key respective to each key
 # Linear Read/Write => TOB
 # Sequential Local read, write is TOB [No master is required]
+
+
+def random_string(length):
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    return result_str
+
+
+def sendMessageToClient(address, message):
+    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    clientSocket.connect(address)
+
+    clientSocket.sendall(message)
+    # response = clientSocket.recv(PAYLOAD_SIZE)
+    # print("Response for set key", response)
+    clientSocket.close()
 
 
 if __name__ == "__main__":
@@ -22,28 +42,34 @@ if __name__ == "__main__":
 
     print(server_addresses)
 
-    # Connect to a client
-    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    clientSocket.connect(server_addresses[0])
+    threads = []
 
-    setKey = '@GJ0_'
-    setValue = 'Value_1'
-    no_reply = False
-    setCommand = b'set' + b' ' + setKey.encode() + b' ' + setValue.encode() + b'\r\n'
-    clientSocket.sendall(setCommand)
-    response = clientSocket.recv(PAYLOAD_SIZE)
+    for i in range(50):
+        # Connect to a client, Connect a pymemcache client
 
-    print("Response for set key", response)
-    clientSocket.close()
+        setKey = '@GJ0_'
+        setValue = random_string(7)
+        no_reply = False
+        setCommand = b'set' + b' ' + setKey.encode() + b' ' + setValue.encode() + b'\r\n'
+        t = threading.Thread(target=(sendMessageToClient), args=(
+            random.choice(server_addresses), setCommand))
+        threads.append(t)
 
-    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    clientSocket.connect(server_addresses[0])
+    for t in threads:
+        t.start()
 
-    print('get key request')
-    getKey = '@GJ0_'
-    getCommand = b'get' + b' ' + setKey.encode() + b'\r\n'
-    clientSocket.sendall(getCommand)
-    response = clientSocket.recv(PAYLOAD_SIZE)
+    for t in threads:
+        t.join()
 
-    print("Response for get key", response)
-    clientSocket.close()
+    time.sleep(100000)
+    # clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # clientSocket.connect(server_addresses[0])
+
+    # print('get key request')
+    # getKey = '@GJ0_'
+    # getCommand = b'get' + b' ' + setKey.encode() + b'\r\n'
+    # clientSocket.sendall(getCommand)
+    # response = clientSocket.recv(PAYLOAD_SIZE)
+
+    # print("Response for get key", response)
+    # clientSocket.close()
