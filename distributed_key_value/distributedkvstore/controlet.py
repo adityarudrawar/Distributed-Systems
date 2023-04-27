@@ -10,7 +10,7 @@ STATUS_KEY = 'status'
 KEY_KEY = 'key'
 VALUE_KEY = 'value'
 NUM_ACK_KEY = 'ack'
-REQ_FRON_KEY = 'req_from'
+REQ_FROM_KEY = 'req_from'
 
 ACK_SENT = 'ACK_SENT'
 ACK_RECV = 'ACK_RECV'
@@ -99,7 +99,7 @@ class Controlet(Process):
         req_id = self.__getUniqueId()
 
         self._map[req_id] = {STATUS_KEY: SENT,
-                             KEY_KEY: key, VALUE_KEY: value, NUM_ACK_KEY: 0, 'conn': conn, 'req': 'set', REQ_FRON_KEY: 'client'}
+                             KEY_KEY: key, VALUE_KEY: value, NUM_ACK_KEY: 0, 'conn': conn, 'req': 'set', REQ_FROM_KEY: 'client'}
 
         # Add to queue : [clock, req_id]
         self.__appendToQueue(
@@ -123,7 +123,7 @@ class Controlet(Process):
         self.__incrementCounter()
 
         self._map[req_id] = {STATUS_KEY: SENT,
-                             KEY_KEY: key, NUM_ACK_KEY: 0, 'conn': conn, 'req': 'set', REQ_FRON_KEY: 'client'}
+                             KEY_KEY: key, NUM_ACK_KEY: 0, 'conn': conn, 'req': 'set', REQ_FROM_KEY: 'client'}
 
         logical_clock = str(self.__getClock())
 
@@ -188,7 +188,7 @@ class Controlet(Process):
                     f"Exception in _handleReq {self.id} msg: {msg} message already exists")
 
             self._map[req_id] = {STATUS_KEY: RECV,
-                                 KEY_KEY: key, VALUE_KEY: value, 'req': msg, REQ_FRON_KEY: 'server'}
+                                 KEY_KEY: key, VALUE_KEY: value, 'req': msg, REQ_FROM_KEY: 'server'}
 
             # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
@@ -203,7 +203,7 @@ class Controlet(Process):
                     f"Exception in _handleReq {self.id} msg: {msg} message already exists")
 
             self._map[req_id] = {STATUS_KEY: RECV,
-                                 KEY_KEY: key, 'req': msg, REQ_FRON_KEY: 'server'}
+                                 KEY_KEY: key, 'req': msg, REQ_FROM_KEY: 'server'}
 
             # Add to queue : [clock, msg, key, value] Can make this better? by giving the id in the list and while processing
             self.__appendToQueue(
@@ -224,19 +224,19 @@ class Controlet(Process):
             # print("order ", self.id, "  ", self.__order)
 
             if not self.queue:
-                print("order ", self.id, "  ", len(
-                    self.__order), " ", self.__order)
 
                 with open("order_result_" + str(self.id) + ".txt", "w") as f:
                     for item in self.__order:
                         f.write(item + "\n")
+                    f.write("file written to : " + str(self.id))
+                print("COMPLETE")
                 continue
 
             QUEUE_LOCK.acquire()
 
             process_req_id = self.queue[0][1]
 
-            if self._map[process_req_id][REQ_FRON_KEY] == 'server':
+            if self._map[process_req_id][REQ_FROM_KEY] == 'server':
 
                 # IF the status is 'recv'
                 if self._map[process_req_id][STATUS_KEY] == RECV:
@@ -274,8 +274,7 @@ class Controlet(Process):
 
                 request = self._map.pop(process_req_id, None)
 
-                print(
-                    f"processing on {self.id}: {process_req} : {request}")
+                print(f"processing on {self.id}: {process_req} : {request}")
 
                 self.__order.append(
                     f"{process_req_id}")
