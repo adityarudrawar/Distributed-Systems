@@ -135,7 +135,12 @@ class Controlet(Process):
         c = Client(self.node_datalet)
         response = c.set(key, value)
         if conn != None:
-            conn.sendall(str(response).encode('utf8'))
+            if response != None:
+                if response:
+                    conn_response = b"STORED\r\n"
+                else:
+                    conn_response = b"NOT_STORED\r\n"
+                conn.sendall(conn_response)
         c.close()
 
         return response
