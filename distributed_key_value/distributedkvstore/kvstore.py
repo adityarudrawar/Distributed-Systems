@@ -64,7 +64,7 @@ class KVStore:
             print(self.__controlet_addresses[i])
             log_file = f'controlet.{i}.log'
             c = controlet.Controlet(
-                address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses, log_file=log_file)
+                address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses)
             controlets.append(c)
 
         print("Starting controlets")
@@ -74,9 +74,9 @@ class KVStore:
 
         print("Controlets and Datalets initialized")
 
-        # Do we need to wait for them to join?
-        for p in all_processes:
-            p.join()
+        # Do we need to wait for them to join? NO
+        # for p in all_processes:
+        #     p.join()
 
 
 def get_free_port():

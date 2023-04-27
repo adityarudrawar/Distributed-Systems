@@ -27,7 +27,7 @@ COUNTER_LOCK = threading.Lock()
 
 
 class Controlet(Process):
-    def __init__(self, address, id, datalets, controlets, log_file):
+    def __init__(self, address, id, datalets, controlets):
         super(Controlet, self).__init__()
 
         self.address = address
@@ -45,6 +45,8 @@ class Controlet(Process):
         self.__controlets = controlets
 
         self._map = {}
+
+        self.__order = []
 
     def __getUniqueId(self):
         return base64.b64encode(os.urandom(6)).decode('ascii')
@@ -217,10 +219,17 @@ class Controlet(Process):
     def __handleQueue(self):
         print("handle queue itself")
         while True:
-            time.sleep(0.01)
-            print(f"queue: {self.id}: {self.queue}: {self._map}")
+            time.sleep(0.001)
+            # print(f"queue: {self.id}: {self.queue}: {self._map}")
+            # print("order ", self.id, "  ", self.__order)
 
             if not self.queue:
+                print("order ", self.id, "  ", len(
+                    self.__order), " ", self.__order)
+
+                with open("order_result_" + str(self.id) + ".txt", "w") as f:
+                    for item in self.__order:
+                        f.write(item + "\n")
                 continue
 
             QUEUE_LOCK.acquire()
@@ -268,6 +277,8 @@ class Controlet(Process):
                 print(
                     f"processing on {self.id}: {process_req} : {request}")
 
+                self.__order.append(
+                    f"{process_req_id}")
             QUEUE_LOCK.release()
 
     def run(self):
