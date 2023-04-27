@@ -307,16 +307,16 @@ class Controlet(Process):
                 request = request.decode('utf8')
 
                 if request[:3] == "set":
-                    split_resp = request.split(" ")
-
+                    args = getArgsFromRequest(request)
                     threading.Thread(target=self.__handleClientSet, args=(
-                        conn, split_resp[1], split_resp[2].split('\r\n')[0],)).start()
+                        conn, args[0], args[1],)).start()
                     # conn.close()
 
                 elif request[:3] == "get":
-                    split_resp = request.split(" ")
+                    args = getArgsFromRequest(request)
+
                     threading.Thread(target=self.__handleClientGet, args=(
-                        conn, split_resp[1].split('\r\n')[0],)).start()
+                        conn, args[0],)).start()
                     # conn.close()
 
                 elif request[:3] == "req":
@@ -329,3 +329,33 @@ class Controlet(Process):
             except Exception as e:
                 print(f"Exception raised in: {str(self.__getClock())}")
                 print(e)
+
+
+def getArgsFromRequest(request):
+    if request[:3] == 'get':
+        key = request.split(' ')[1].replace('\r\n', '')
+        return [key]
+
+    tokenPos = request.find('\r\n')
+
+    commandList = request.split('\r\n')
+
+    before = commandList[0]
+    after = commandList[1]
+
+    before = before.split(" ")
+
+    key = before[1]
+    flags = before[2]
+    expiry = before[3]
+
+    if len(before) <= 5:
+        noReply = False
+        valueSize = int(before[4].split("\r\n")[0])
+        value = after
+    else:
+        noReply = True
+        valueSize = int(before[4])
+        value = after
+
+    return [key, value, noReply, flags, expiry]
