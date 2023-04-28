@@ -1,6 +1,7 @@
 import socket
 from distributedkvstore import datalet
 from distributedkvstore import controlet
+import os
 
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
 LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
@@ -11,18 +12,26 @@ CASUAL_CONSISTENCY = 'casual_consistency'
 class KVStore:
     def __init__(self, replicas=3,
                  consistency='',
-                 storage_directory=""):
+                 storage_directory="",
+                 output_directory=""):
         print("Intializing KV STORE")
 
         if consistency == '':
             print("consistency model not found")
             return
 
+        self.__consistency = consistency
         self.replicas = replicas
 
         self.host = '127.0.0.1'
 
         self.storage_directory = storage_directory
+
+        self.output_directory = output_directory
+
+        if not os.path.exists(self.output_directory):
+            os.makedirs(self.output_directory)
+
 
     def get_controlet_address(self):
         return self.__controlet_addresses
@@ -64,7 +73,7 @@ class KVStore:
             print(self.__controlet_addresses[i])
             log_file = f'controlet.{i}.log'
             c = controlet.Controlet(
-                address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses)
+                address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses, consistency=self.__consistency, output_directory=self.output_directory)
             controlets.append(c)
 
         print("Starting controlets")

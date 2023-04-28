@@ -26,10 +26,16 @@ PAYLOAD_SIZE = 4096
 QUEUE_LOCK = threading.Lock()
 COUNTER_LOCK = threading.Lock()
 
+EVENTUAL_CONSISTENCY = 'eventual_consistency'
+LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
+SEQUENTIAL_CONSISTENCY = 'sequential_consistency'
+CASUAL_CONSISTENCY = 'casual_consistency'
 
 class Controlet(Process):
-    def __init__(self, address, id, datalets, controlets):
+    def __init__(self, address, id, datalets, controlets, consistency, output_directory):
         super(Controlet, self).__init__()
+
+        self.__consistency = consistency
 
         self.address = address
 
@@ -48,6 +54,8 @@ class Controlet(Process):
 
         self.__order = []
 
+        self.__output_directory = output_directory
+    
     def __getUniqueId(self):
         return base64.b64encode(os.urandom(6)).decode('ascii')
 
@@ -109,7 +117,7 @@ class Controlet(Process):
 
         self.__broadcastMessage(message)
 
-    def __handleClientGet(self, conn, key):
+    def __handleGetBroadcast(self, conn, key):
         req_id = self.__getUniqueId()
 
         self.__incrementCounter()
@@ -128,6 +136,9 @@ class Controlet(Process):
 
         self.__broadcastMessage(message)
 
+    def __handleGetNormal(self, conn, key):
+        self.__getKey(key, conn)
+    
     def __setKey(self, key, value, conn=None):
         '''
         Sends the key value to the datalet
@@ -229,7 +240,7 @@ class Controlet(Process):
 
             if not self.queue:
 
-                with open("order_result_" + str(self.id) + ".txt", "w") as f:
+                with open(self.__output_directory + "\order_result_" + str(self.id) + ".txt", "w") as f:
                     for item in self.__order:
                         f.write(item + "\n")
                     f.write("file written to : " + str(self.id))
@@ -304,6 +315,13 @@ class Controlet(Process):
             QUEUE_LOCK.release()
 
     def run(self):
+        if self.__consistency == LINEARIZABLE_CONSISTENCY:
+            self.__handleClientGet = self.__handleGetBroadcast
+        elif self.__consistency == SEQUENTIAL_CONSISTENCY:
+            self.__handleClientGet = self.__handleGetNormal
+        else:
+            pass
+
         print("Controlet process started")
 
         # Start the handling queue thread
