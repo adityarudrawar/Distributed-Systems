@@ -10,8 +10,6 @@ collections.Callable = collections.abc.Callable
 
 import pdb
 
-
-
 # Eventual Local Read, writes to anyserver with asynchronous broadcast to every one else with a logical key respective to each key
 # Linear Read/Write => TOB
 # Sequential Local read, write is TOB [No master is required]
@@ -51,17 +49,17 @@ if __name__ == "__main__":
     PAYLOAD_SIZE = 4096
 
     kvs = kvstore.KVStore(
-        consistency='linearizable_consistency',
+        consistency='sequential_consistency',
         replicas=3,
         storage_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\storage\key_value',
-        output_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\output\linear_consistency_output'
+        output_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\output\sequential_consistency_output'
         )
 
     kvs.start()
 
     server_addresses = kvs.get_controlet_address()
 
-    numRequests = 10
+    numRequests = 4
 
     threads = []
     for i in range(numRequests):
