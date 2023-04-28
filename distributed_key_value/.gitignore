@@ -3,4 +3,5 @@ go.mod
 /test/
 __pycache__
 /distributedkvstore/storage/
+/distributedkvstore/output/
 .env
