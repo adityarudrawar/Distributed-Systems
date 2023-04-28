@@ -39,7 +39,7 @@ class Controlet(Process):
 
         self.address = address
 
-        self.counter = 0
+        self.counter = 1
 
         self.id = id
 
@@ -100,7 +100,7 @@ class Controlet(Process):
                 continue
             self.__sendMessage(controlet, message)
 
-    def __handleClientSet(self, conn, key, value):
+    def __handleSetBroadcast(self, conn, key, value, flags=0, expiry=0, noReply=True):
         self.__incrementCounter()
         logical_clock = str(self.__getClock())
 
@@ -316,11 +316,14 @@ class Controlet(Process):
 
     def run(self):
         if self.__consistency == LINEARIZABLE_CONSISTENCY:
+            self.__handleClientSet = self.__handleSetBroadcast
             self.__handleClientGet = self.__handleGetBroadcast
         elif self.__consistency == SEQUENTIAL_CONSISTENCY:
+            self.__handleClientSet = self.__handleSetBroadcast
             self.__handleClientGet = self.__handleGetNormal
         else:
-            pass
+            self.__handleClientSet = self.__handleSetNormal
+            self.__handleClientGet = self.__handleGetNormal
 
         print("Controlet process started")
 
@@ -394,4 +397,9 @@ def getArgsFromRequest(request):
         valueSize = int(before[4])
         value = after
 
-    return [key, value, noReply, flags, expiry]
+    # key: Key,
+    # value: Any,
+    # expire: int = 0,
+    # noreply: bool | None = None,
+    # flags: int | None = None
+    return [key, value, flags, expiry, noReply]
