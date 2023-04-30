@@ -67,7 +67,6 @@ class KVStore:
 
         controlets = []
         for i in range(len(controlets_ports)):
-            print(self.__controlet_addresses[i])
             c = controlet.Controlet(
                 address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses, consistency=self.__consistency, output_directory=self.output_directory)
             controlets.append(c)
