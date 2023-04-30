@@ -7,18 +7,18 @@ import base64
 import time
 import mmh3
 
-STATUS_KEY = 'status'
-KEY_KEY = 'key'
-VALUE_KEY = 'value'
-NUM_ACK_KEY = 'ack'
-REQ_FROM_KEY = 'req_from'
+STATUS = 'status'
+KEY = 'key'
+VALUE = 'value'
+NUM_ACK = 'ack'
+REQ_FROM = 'req_from'
 
-ACK_SENT = 'ACK_SENT'
-ACK_RECV = 'ACK_RECV'
+ACK_SENT = 'ack_sent'
+ACK_RECV = 'ack_recv'
 
-READY = 'READY'
-SENT = 'SENT'
-RECV = 'RECV'
+READY = 'ready'
+SENT = 'sent'
+RECV = 'recv'
 
 REQ_TYPE = 'req_type'
 
@@ -38,54 +38,54 @@ class Controlet(Process):
 
         self.__consistency = consistency
 
-        self.address = address
+        self.__address = address
 
-        self.counter = 1
+        self.__counter = 1
 
-        self.id = id
+        self.__id = id
 
-        self.node_datalet = datalets[id]
+        self.__node_datalet = datalets[id]
 
-        self.queue = []
+        self.__queue = []
 
-        self.other_datalets = datalets[:id] + datalets[id + 1:]
+        self.__other_datalets = datalets[:id] + datalets[id + 1:]
         self.__controlets = controlets
 
         self.__numOfControlets = len(controlets)
 
-        self._map = {}
+        self.__map = {}
 
         self.__order = []
 
         self.__output_directory = output_directory
 
-        self.__delimeter = " "
-    
+        self.__delimeter = '__&**&__'
+
     def __getUniqueId(self):
         return base64.b64encode(os.urandom(6)).decode('ascii')
 
     def __incrementCounter(self):
         COUNTER_LOCK.acquire()
-        self.counter += 1
+        self.__counter += 1
         COUNTER_LOCK.release()
 
     def __getClock(self):
-        return float(str(self.counter) + "." + str(self.id))
+        return float(str(self.__counter) + '.' + str(self.__id))
 
     def __appendToQueue(self, contents):
 
         QUEUE_LOCK.acquire()
 
-        self.queue.append(contents)
-        self.queue.sort(key=lambda x: (x[0][0], x[0][1]))
+        self.__queue.append(contents)
+        self.__queue.sort(key=lambda x: (x[0][0], x[0][1]))
 
         QUEUE_LOCK.release()
 
     def __popFromQueue(self):
         QUEUE_LOCK.acquire()
 
-        self.queue.pop(0)
-        self.queue.sort(key=lambda x: (x[0][0], x[0][1]))
+        self.__queue.pop(0)
+        self.__queue.sort(key=lambda x: (x[0][0], x[0][1]))
 
         QUEUE_LOCK.release()
 
@@ -96,12 +96,12 @@ class Controlet(Process):
         clientSocket.sendall(message)
 
         # Do we need this?
-        clientSocket.recv(PAYLOAD_SIZE)
+        # clientSocket.recv(PAYLOAD_SIZE)
 
     def __broadcastMessage(self, message):
 
         for controlet in self.__controlets:
-            if controlet == self.address:
+            if controlet == self.__address:
                 continue
             self.__sendMessage(controlet, message)
 
@@ -111,11 +111,11 @@ class Controlet(Process):
 
         req_id = self.__getUniqueId()
 
-        self._map[req_id] = {STATUS_KEY: SENT,
-                             KEY_KEY: key, VALUE_KEY: value, NUM_ACK_KEY: 0, 'conn': conn, REQ_TYPE: 'set', REQ_FROM_KEY: 'client'}
+        self.__map[req_id] = {STATUS: SENT,
+                             KEY: key, VALUE: value, NUM_ACK: 0, 'conn': conn, REQ_TYPE: 'set', REQ_FROM: 'client'}
 
         self.__appendToQueue(
-            [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
+            [[int(logical_clock.split('.')[0]), int(logical_clock.split('.')[1])], req_id])
 
         message = self.__createMessage(
             ['req', req_id, logical_clock, 'set', key, value])
@@ -127,15 +127,15 @@ class Controlet(Process):
 
         self.__incrementCounter()
 
-        self._map[req_id] = {STATUS_KEY: SENT,
-                             KEY_KEY: key, NUM_ACK_KEY: 0, 'conn': conn, REQ_TYPE: 'get', REQ_FROM_KEY: 'client'}
+        self.__map[req_id] = {STATUS: SENT,
+                             KEY: key, NUM_ACK: 0, 'conn': conn, REQ_TYPE: 'get', REQ_FROM: 'client'}
 
         logical_clock = str(self.__getClock())
 
         self.__appendToQueue(
-            [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
+            [[int(logical_clock.split('.')[0]), int(logical_clock.split('.')[1])], req_id])
 
-        # TODO: better the key value size split that is not with a " ". This will cause a lot of errors in the future
+        # TODO: better the key value size split that is not with a ' '. This will cause a lot of errors in the future
         message = self.__createMessage(
             ['req', req_id, logical_clock, 'get', key])
 
@@ -145,15 +145,15 @@ class Controlet(Process):
         hash_value = mmh3.hash(key)
         hashcode = (hash_value % self.__numOfControlets)
                 
-        if hashcode == self.id:
+        if hashcode == self.__id:
             
             self.__incrementCounter()
 
-            counter = self.counter
+            counter = self.__counter
 
-            response = self.__setKey(key=key, value=value, conn=conn, flags=counter, expiry=expiry, noReply=noReply, address = self.node_datalet)
+            response = self.__setKey(key=key, value=value, conn=conn, flags=counter, expiry=expiry, noReply=noReply, address = self.__node_datalet)
 
-            for datalet_address in self.other_datalets:
+            for datalet_address in self.__other_datalets:
                 self.__setKey(key, value, flags= counter, expiry=expiry, noReply=noReply, address = datalet_address)
         else:        
             assigned_controlet = self.__controlets[hashcode]
@@ -161,7 +161,7 @@ class Controlet(Process):
 
 
     def __handleGetNormal(self, conn, key):
-        self.__getKey(key, conn, address= self.node_datalet)
+        self.__getKey(key, conn, address= self.__node_datalet)
     
     def __setKey(self, key, value, conn=None, flags=0, expiry=0, noReply=False, address = None):
         '''
@@ -171,9 +171,9 @@ class Controlet(Process):
         response = c.set(key, value, flags=flags, expire=expiry, noreply=noReply)
         if conn != None:
             if response == None or not response:
-                conn_response = b"NOT_STORED\r\n"
+                conn_response = b'NOT_STORED\r\n'
             else:
-                conn_response = b"STORED\r\n"
+                conn_response = b'STORED\r\n'
             conn.sendall(conn_response)
             conn.close()
         c.close()
@@ -194,9 +194,9 @@ class Controlet(Process):
 
                 cmd = 'VALUE' + ' ' + key + ' ' + str(0) + ' ' + str(len(conn_response.encode('utf8'))) + '\r\n'
                 conn.send(cmd.encode('utf8'))
-                conn.send("{}\r\n".format(conn_response).encode('utf8'))
+                conn.send('{}\r\n'.format(conn_response).encode('utf8'))
 
-            conn.send("END\r\n".encode('utf8'))
+            conn.send('END\r\n'.encode('utf8'))
 
         c.close()
 
@@ -218,60 +218,60 @@ class Controlet(Process):
         return message
 
     def __handleReq(self, request):
-        # Req, req_id, timestamp, msg, ...
+
         split_req = request.split(self.__delimeter)
         req, req_id, logical_clock, msg = split_req[0], split_req[1], \
             split_req[2], split_req[3]
 
-        if msg == "set":
+        if msg == 'set':
             key = split_req[4]
             value = split_req[5]
 
-            self._map[req_id] = {STATUS_KEY: RECV,
-                                 KEY_KEY: key, VALUE_KEY: value, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
+            self.__map[req_id] = {STATUS: RECV,
+                                 KEY: key, VALUE: value, REQ_TYPE: msg, REQ_FROM: 'server'}
 
             self.__appendToQueue(
-                [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
+                [[int(logical_clock.split('.')[0]), int(logical_clock.split('.')[1])], req_id])
 
-        elif msg == "get":
+        elif msg == 'get':
             key = split_req[4]
 
-            self._map[req_id] = {STATUS_KEY: RECV,
-                                 KEY_KEY: key, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
+            self.__map[req_id] = {STATUS: RECV,
+                                 KEY: key, REQ_TYPE: msg, REQ_FROM: 'server'}
 
             self.__appendToQueue(
-                [[int(logical_clock.split(".")[0]), int(logical_clock.split(".")[1])], req_id])
+                [[int(logical_clock.split('.')[0]), int(logical_clock.split('.')[1])], req_id])
 
         # For the original sender
-        elif msg == "ack":
-            self._map[req_id][STATUS_KEY] = ACK_RECV
-            self._map[req_id][NUM_ACK_KEY] += 1
-        elif msg == "ready":
-            self._map[req_id][STATUS_KEY] = READY
+        elif msg == 'ack':
+            self.__map[req_id][STATUS] = ACK_RECV
+            self.__map[req_id][NUM_ACK] += 1
+        elif msg == 'ready':
+            self.__map[req_id][STATUS] = READY
 
     def __handleQueue(self):
         while True:
             time.sleep(0.001)
 
-            if not self.queue:
+            if not self.__queue:
 
-                with open(self.__output_directory + "\order_result_" + str(self.id) + ".txt", "w") as f:
+                with open(self.__output_directory + '\order_result_' + str(self.__id) + '.txt', 'w') as f:
                     for item in self.__order:
-                        f.write(item + "\n")
-                    f.write("file written to : " + str(self.id))
+                        f.write(item + '\n')
+                    f.write('file written to : ' + str(self.__id))
                 continue
 
             QUEUE_LOCK.acquire()
 
-            process_req_id = self.queue[0][1]
+            process_req_id = self.__queue[0][1]
 
-            if self._map[process_req_id][REQ_FROM_KEY] == 'server':
+            if self.__map[process_req_id][REQ_FROM] == 'server':
 
                 # IF the status is 'recv'
-                if self._map[process_req_id][STATUS_KEY] == RECV:
+                if self.__map[process_req_id][STATUS] == RECV:
 
                     # Find that controlet
-                    controlet_id = self.queue[0][0][1]
+                    controlet_id = self.__queue[0][0][1]
 
                     # Could be a better way?
                     controled_address = self.__controlets[controlet_id]
@@ -283,47 +283,48 @@ class Controlet(Process):
                     self.__sendMessage(controled_address, message)
 
                     # Change the status to ACK_SENT
-                    self._map[process_req_id][STATUS_KEY] = ACK_SENT
+                    self.__map[process_req_id][STATUS] = ACK_SENT
 
             # If the staus is 'ACK_SENT' do noting
-            if self._map[process_req_id][STATUS_KEY] == ACK_SENT:
+            if self.__map[process_req_id][STATUS] == ACK_SENT:
                 pass
 
-            if self._map[process_req_id][STATUS_KEY] == ACK_RECV:
+            if self.__map[process_req_id][STATUS] == ACK_RECV:
 
-                if self._map[process_req_id][NUM_ACK_KEY] == len(self.__controlets) - 1:
-                    self._map[process_req_id][STATUS_KEY] = READY
+                if self.__map[process_req_id][NUM_ACK] == len(self.__controlets) - 1:
+                    self.__map[process_req_id][STATUS] = READY
 
                     message = self.__createMessage(
                         ['req', process_req_id, self.__getClock(), 'ready'])
 
                     self.__broadcastMessage(message)
-            if self._map[process_req_id][STATUS_KEY] == READY:
-                process_req = self.queue.pop(0)
+            if self.__map[process_req_id][STATUS] == READY:
+                process_req = self.__queue.pop(0)
 
-                request = self._map.pop(process_req_id, None)
+                request = self.__map.pop(process_req_id, None)
 
                 conn = None
-                if request[REQ_FROM_KEY] == 'client':
+                if request[REQ_FROM] == 'client':
                     conn = request['conn']
 
-                key = request[KEY_KEY]
-                response = ""
+                key = request[KEY]
+                response = ''
 
                 if request[REQ_TYPE] == 'set':
-                    value = request[VALUE_KEY]
+                    value = request[VALUE]
 
-                    response = self.__setKey(key, value, conn, address=self.node_datalet)
+                    response = self.__setKey(key, value, conn, address=self.__node_datalet)
 
                 if request[REQ_TYPE] == 'get':
-                    response = self.__getKey(key, conn, address= self.node_datalet)
+                    response = self.__getKey(key, conn, address= self.__node_datalet)
 
                 self.__order.append(
-                    f"{process_req_id} {request[REQ_TYPE]} {response}")
+                    f'{process_req_id} {request[REQ_TYPE]} {response}')
             QUEUE_LOCK.release()
 
     def run(self):
         if self.__consistency == LINEARIZABLE_CONSISTENCY:
+            print(f'{self.__id} {LINEARIZABLE_CONSISTENCY}')
             self.__handleClientSet = self.__handleSetBroadcast
             self.__handleClientGet = self.__handleGetBroadcast
 
@@ -331,6 +332,7 @@ class Controlet(Process):
             threading.Thread(target=self.__handleQueue, args=()).start()
 
         elif self.__consistency == SEQUENTIAL_CONSISTENCY:
+            print(f'{self.__id} {SEQUENTIAL_CONSISTENCY}')
             self.__handleClientSet = self.__handleSetBroadcast
             self.__handleClientGet = self.__handleGetNormal
 
@@ -338,13 +340,14 @@ class Controlet(Process):
             threading.Thread(target=self.__handleQueue, args=()).start()
 
         else:
+            print(f'{self.__id} {EVENTUAL_CONSISTENCY}')
             self.__handleClientSet = self.__handleSetNormal
             self.__handleClientGet = self.__handleGetNormal
 
         # Start the listening process.
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        serverSocket.bind(self.address)
+        serverSocket.bind(self.__address)
 
         serverSocket.listen()
 
@@ -356,26 +359,27 @@ class Controlet(Process):
 
                 request = request.decode('utf8')
 
-                if request[:3] == "set":
+                if request[:3] == 'set':
                     args = getArgsFromRequest(request)
                     threading.Thread(target=self.__handleClientSet, args=(
                         conn, args[0], args[1], args[2], args[3], args[4])).start()
                     # conn.close()
 
-                elif request[:3] == "get":
+                elif request[:3] == 'get':
                     args = getArgsFromRequest(request)
 
                     threading.Thread(target=self.__handleClientGet, args=(
                         conn, args[0],)).start()
                     # conn.close()
 
-                elif request[:3] == "req":
+                elif request[:3] == 'req':
                     threading.Thread(target=self.__handleReq,
                                      args=(request,)).start()
-                    # conn.close()
+                    # Important to close the connection
+                    conn.close()
 
                 else:
-                    conn.sendall(b"INVALID_COMMAND\r\n")
+                    conn.sendall(b'INVALID_COMMAND\r\n')
             except Exception as e:
                 pass
 
@@ -391,7 +395,7 @@ def getArgsFromRequest(request):
     before = commandList[0]
     after = commandList[1]
 
-    before = before.split(" ")
+    before = before.split(' ')
 
     key = before[1]
     flags = int(before[2])
@@ -399,7 +403,7 @@ def getArgsFromRequest(request):
 
     if len(before) <= 5:
         noReply = False
-        valueSize = int(before[4].split("\r\n")[0])
+        valueSize = int(before[4].split('\r\n')[0])
         value = after
     else:
         noReply = True
