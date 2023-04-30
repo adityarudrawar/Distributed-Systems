@@ -17,7 +17,6 @@ class Datalet(Process):
 
         self.id = id
 
-        print("Datalet intialized")
         if not os.path.exists(self.storage_directory):
             os.makedirs(self.storage_directory)
 
