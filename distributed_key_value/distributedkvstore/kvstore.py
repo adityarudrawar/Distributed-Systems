@@ -17,6 +17,7 @@ class KVStore:
                  storage_directory="",
                  output_directory=""):
 
+        print("KV STORE")
         if consistency == '':
             print("consistency model not found")
             return
@@ -38,6 +39,7 @@ class KVStore:
         return self.__controlet_addresses
 
     def start(self):
+        print("STARTING CONTROL PLANE AND DATA PLANE")
         all_processes = []
         controlets_ports = []
         datalets_ports = []
@@ -76,7 +78,8 @@ class KVStore:
             all_processes.append(c)
 
         # Do we need to wait for them to join? NO
-        time.sleep(5)
+        time.sleep(2)
+        print("FINISHED CONTROL PLANE AND DATA PLANE INITIALIZATION")
 
 
 def get_free_port():
