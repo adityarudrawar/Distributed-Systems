@@ -58,6 +58,8 @@ class Controlet(Process):
         self.__order = []
 
         self.__output_directory = output_directory
+
+        self.__delimeter = " "
     
     def __getUniqueId(self):
         return base64.b64encode(os.urandom(6)).decode('ascii')
@@ -211,13 +213,13 @@ class Controlet(Process):
 
             if i == len(params) - 1:
                 continue
-            message += b' '
+            message += self.__delimeter.encode('utf8')
 
         return message
 
     def __handleReq(self, request):
         # Req, req_id, timestamp, msg, ...
-        split_req = request.split(" ")
+        split_req = request.split(self.__delimeter)
         req, req_id, logical_clock, msg = split_req[0], split_req[1], \
             split_req[2], split_req[3]
 
