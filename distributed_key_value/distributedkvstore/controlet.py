@@ -30,7 +30,7 @@ COUNTER_LOCK = threading.Lock()
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
 LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
 SEQUENTIAL_CONSISTENCY = 'sequential_consistency'
-CASUAL_CONSISTENCY = 'casual_consistency'
+CAUSAL_CONSISTENCY = 'causal_consistency'
 
 class Controlet(Process):
     def __init__(self, address, id, datalets, controlets, consistency, output_directory):
