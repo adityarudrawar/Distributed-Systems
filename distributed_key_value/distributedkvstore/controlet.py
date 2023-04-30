@@ -135,7 +135,6 @@ class Controlet(Process):
         self.__appendToQueue(
             [[int(logical_clock.split('.')[0]), int(logical_clock.split('.')[1])], req_id])
 
-        # TODO: better the key value size split that is not with a ' '. This will cause a lot of errors in the future
         message = self.__createMessage(
             ['req', req_id, logical_clock, 'get', key])
 
@@ -188,7 +187,6 @@ class Controlet(Process):
         response = c.get(key)
 
         if conn != None:
-            # Do I need to do the same thing for SET?
             if response != None:
                 conn_response  = response.decode('utf8')
 
@@ -318,8 +316,8 @@ class Controlet(Process):
                 if request[REQ_TYPE] == 'get':
                     response = self.__getKey(key, conn, address= self.__node_datalet)
 
-                self.__order.append(
-                    f'{process_req_id} {request[REQ_TYPE]} {response}')
+                self.__order.append(f'{process_req_id} {request[REQ_TYPE]} {response}')
+
             QUEUE_LOCK.release()
 
     def run(self):
