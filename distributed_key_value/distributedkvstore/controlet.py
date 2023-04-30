@@ -48,8 +48,7 @@ class Controlet(Process):
 
         self.queue = []
 
-        # self.other_datalets = datalets[:id] + datalets[id + 1:]
-        self.other_datalets = datalets
+        self.other_datalets = datalets[:id] + datalets[id + 1:]
         self.__controlets = controlets
 
         self.__numOfControlets = len(controlets)
