@@ -5,6 +5,7 @@ import threading
 import os
 import base64
 import time
+import mmh3
 
 STATUS_KEY = 'status'
 KEY_KEY = 'key'
@@ -47,8 +48,11 @@ class Controlet(Process):
 
         self.queue = []
 
-        self.other_datalets = datalets[:id] + datalets[id + 1:]
+        # self.other_datalets = datalets[:id] + datalets[id + 1:]
+        self.other_datalets = datalets
         self.__controlets = controlets
+
+        self.__numOfControlets = len(controlets)
 
         self._map = {}
 
@@ -136,33 +140,58 @@ class Controlet(Process):
 
         self.__broadcastMessage(message)
 
+    def __handleSetNormal(self, conn, key, value, flags=0, expiry=0, noReply=True):
+        # Check the hashcode
+        hash_value = mmh3.hash(key)
+        hashcode = (hash_value % self.__numOfControlets)
+                
+        if hashcode == self.id:
+            
+            self.__incrementCounter()
+
+            counter = self.counter
+
+            response = self.__setKey(key=key, value=value, conn=conn, flags=counter, expiry=expiry, noReply=noReply, address = self.node_datalet)
+
+            print(f"{self.id} sending the request to datalet k: {key} v: {value} c: {counter}") 
+            for datalet_address in self.other_datalets:
+                self.__setKey(key, value, flags= counter, expiry=expiry, noReply=noReply, address = datalet_address)
+        else:        
+            print(f"{self.id} Forward the request to the correct controlet {key} {value}")
+            # Forward the request to the correct controlet
+            assigned_controlet = self.__controlets[hashcode]
+            self.__setKey(key, value, conn=conn, address = assigned_controlet)
+
+
     def __handleGetNormal(self, conn, key):
-        self.__getKey(key, conn)
+        # Do we need this?
+        # self.__incrementCounter()
+        self.__getKey(key, conn, address= self.node_datalet)
     
-    def __setKey(self, key, value, conn=None):
+    def __setKey(self, key, value, conn=None, flags=0, expiry=0, noReply=False, address = None):
         '''
         Sends the key value to the datalet
         '''
-        c = Client(self.node_datalet)
-        response = c.set(key, value)
+        c = Client(address)
+        response = c.set(key, value, flags=flags, expire=expiry, noreply=noReply)
         if conn != None:
-            if response != None:
-                if response:
-                    conn_response = b"STORED\r\n"
-                else:
-                    conn_response = b"NOT_STORED\r\n"
-                conn.sendall(conn_response)
+            if response == None or not response:
+                conn_response = b"NOT_STORED\r\n"
+            else:
+                conn_response = b"STORED\r\n"
+            conn.sendall(conn_response)
+            conn.close()
         c.close()
 
         return response
 
-    def __getKey(self, key, conn=None):
+    def __getKey(self, key, conn=None, address = None):
         '''
         Gets the value from the datalet
         '''
-        c = Client(self.node_datalet)
+        c = Client(address)
         response = c.get(key)
-        print(f"response {self.id}", response)
+
         if conn != None:
             # Do I need to do the same thing for SET?
             if response != None:
@@ -302,12 +331,12 @@ class Controlet(Process):
                     value = request[VALUE_KEY]
 
                     print("set request", key, value)
-                    response = self.__setKey(key, value, conn)
+                    response = self.__setKey(key, value, conn, address=self.node_datalet)
                     print(f"set request {self.id}, key {key} value {value} respone {response}")
 
                 if request[REQ_TYPE] == 'get':
                     print(f"get request {self.id}", key)
-                    response = self.__getKey(key, conn)
+                    response = self.__getKey(key, conn, address= self.node_datalet)
                     print(f"get request {self.id}, key {key} respone {response}")
 
                 self.__order.append(
@@ -318,17 +347,22 @@ class Controlet(Process):
         if self.__consistency == LINEARIZABLE_CONSISTENCY:
             self.__handleClientSet = self.__handleSetBroadcast
             self.__handleClientGet = self.__handleGetBroadcast
+
+            # Start the handling queue thread
+            threading.Thread(target=self.__handleQueue, args=()).start()
+
         elif self.__consistency == SEQUENTIAL_CONSISTENCY:
             self.__handleClientSet = self.__handleSetBroadcast
             self.__handleClientGet = self.__handleGetNormal
+
+            # Start the handling queue thread
+            threading.Thread(target=self.__handleQueue, args=()).start()
+
         else:
             self.__handleClientSet = self.__handleSetNormal
             self.__handleClientGet = self.__handleGetNormal
 
         print("Controlet process started")
-
-        # Start the handling queue thread
-        threading.Thread(target=self.__handleQueue, args=()).start()
 
         # Start the listening process.
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -348,7 +382,7 @@ class Controlet(Process):
                 if request[:3] == "set":
                     args = getArgsFromRequest(request)
                     threading.Thread(target=self.__handleClientSet, args=(
-                        conn, args[0], args[1],)).start()
+                        conn, args[0], args[1], args[2], args[3], args[4])).start()
                     # conn.close()
 
                 elif request[:3] == "get":
@@ -361,7 +395,7 @@ class Controlet(Process):
                 elif request[:3] == "req":
                     threading.Thread(target=self.__handleReq,
                                      args=(request,)).start()
-                    conn.close()
+                    # conn.close()
 
                 else:
                     conn.sendall(b"INVALID_COMMAND\r\n")
@@ -385,8 +419,8 @@ def getArgsFromRequest(request):
     before = before.split(" ")
 
     key = before[1]
-    flags = before[2]
-    expiry = before[3]
+    flags = int(before[2])
+    expiry = int(before[3])
 
     if len(before) <= 5:
         noReply = False

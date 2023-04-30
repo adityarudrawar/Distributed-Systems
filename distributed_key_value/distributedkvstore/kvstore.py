@@ -2,6 +2,8 @@ import socket
 from distributedkvstore import datalet
 from distributedkvstore import controlet
 import os
+import time
+import shutil
 
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
 LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
@@ -71,7 +73,6 @@ class KVStore:
         print("Initializing controlets")
         for i in range(len(controlets_ports)):
             print(self.__controlet_addresses[i])
-            log_file = f'controlet.{i}.log'
             c = controlet.Controlet(
                 address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses, consistency=self.__consistency, output_directory=self.output_directory)
             controlets.append(c)
@@ -84,8 +85,7 @@ class KVStore:
         print("Controlets and Datalets initialized")
 
         # Do we need to wait for them to join? NO
-        # for p in all_processes:
-        #     p.join()
+        time.sleep(5)
 
 
 def get_free_port():

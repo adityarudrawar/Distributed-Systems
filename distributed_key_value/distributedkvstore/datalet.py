@@ -5,6 +5,7 @@ import json
 import os
 from multiprocessing import Process
 
+WRITE_LOCK = threading.Lock()
 
 class Datalet(Process):
     def __init__(self, address, storage_directory, id):
@@ -23,14 +24,26 @@ class Datalet(Process):
     def writeToFile(self, key, object):
         try:
 
+            WRITE_LOCK.acquire()
+            
+            if object["flags"] != 0:
+                stored_obj = self.readFromFile(key)
+
+                if stored_obj != None and stored_obj["flags"] >= object["flags"]:
+                    WRITE_LOCK.release()
+                    return False
+
             with open(self.storage_directory + "\\" + key, 'w+', encoding='utf8') as f:
-                f.write(json.dumps({"value": object}, ensure_ascii=False))
+                f.write(json.dumps(object, ensure_ascii=False))
                 f.close()
+
+            WRITE_LOCK.release()
 
             return True
         except Exception as e:
-            print(f"Exception raised while writing to file: {e}")
+            print(f"self.id {self.id} Exception raised while writing to file: {e}")
             return False
+
 
     def readFromFile(self, key):
         try:
@@ -38,14 +51,13 @@ class Datalet(Process):
                 return None
 
             f = open(self.storage_directory + "\\" + key, 'r', encoding='utf8')
-            obj = json.load(f)
+            obj = json.load(f)  
             f.close()
-            return obj["value"]
 
+            return obj
         except Exception as e:
-            print(e)
             print(
-                f"Exception raised while reading file for key: {key} =>: {e}")
+                f"self.id {self.id} obj Exception raised while reading file for key: {key} =>: {e}")
             return None
 
     def setFunction(self, request, conn, id):
@@ -61,14 +73,15 @@ class Datalet(Process):
             before = before.split(" ")
 
             key = before[1]
-            flags = before[2]
-            expiry = before[3]
+            flags = int(before[2])
+            expiry = int(before[3])
 
             if len(before) <= 5:
                 noReply = False
                 valueSize = int(before[4].split("\r\n")[0])
                 value = after
             else:
+                print("noreply set to True")
                 noReply = True
                 valueSize = int(before[4])
                 value = after
@@ -77,18 +90,16 @@ class Datalet(Process):
                 conn.sendall(b"STORED\r\n")
 
             # [0 => value, 1 => valueSize, 2 => flags, 3 => expiry, 4 => noReply, 6 => created_at]
-            object = [
-                value,
-                valueSize,
-                flags,
-                expiry,
-                noReply
-            ]
+            object =  {
+                "value" : value,
+                "flags" : flags,
+                "expiry": expiry,
+                "noReply": noReply,
+            }
 
             response = b''
 
-            # if writeToFile(key, object):
-            if self.writeToFile(key, value):
+            if self.writeToFile(key, object):
                 response = b"STORED\r\n"
             else:
                 response = b"NOT_STORED\r\n"
@@ -110,6 +121,7 @@ class Datalet(Process):
             if object != None:
                 # VALUE flags valueSize\r\n
                 # value\r\n
+                object = object["value"]
 
                 cmd = 'VALUE' + ' ' + key + ' ' + \
                     str(0) + ' ' + str(len(object.encode('utf8'))) + '\r\n'
