@@ -141,7 +141,6 @@ class Controlet(Process):
         self.__broadcastMessage(message)
 
     def __handleSetNormal(self, conn, key, value, flags=0, expiry=0, noReply=True):
-        # Check the hashcode
         hash_value = mmh3.hash(key)
         hashcode = (hash_value % self.__numOfControlets)
                 
@@ -153,19 +152,14 @@ class Controlet(Process):
 
             response = self.__setKey(key=key, value=value, conn=conn, flags=counter, expiry=expiry, noReply=noReply, address = self.node_datalet)
 
-            print(f"{self.id} sending the request to datalet k: {key} v: {value} c: {counter}") 
             for datalet_address in self.other_datalets:
                 self.__setKey(key, value, flags= counter, expiry=expiry, noReply=noReply, address = datalet_address)
         else:        
-            print(f"{self.id} Forward the request to the correct controlet {key} {value}")
-            # Forward the request to the correct controlet
             assigned_controlet = self.__controlets[hashcode]
             self.__setKey(key, value, conn=conn, address = assigned_controlet)
 
 
     def __handleGetNormal(self, conn, key):
-        # Do we need this?
-        # self.__incrementCounter()
         self.__getKey(key, conn, address= self.node_datalet)
     
     def __setKey(self, key, value, conn=None, flags=0, expiry=0, noReply=False, address = None):
@@ -209,7 +203,6 @@ class Controlet(Process):
 
     def __createMessage(self, params):
         if len(params) < 4:
-            print("Raise exception cause params is less than 4")
             raise Exception
 
         message = b''
@@ -232,9 +225,6 @@ class Controlet(Process):
         if msg == "set":
             key = split_req[4]
             value = split_req[5]
-            if req_id in self._map:
-                print(
-                    f"Exception in _handleReq {self.id} msg: {msg} message already exists")
 
             self._map[req_id] = {STATUS_KEY: RECV,
                                  KEY_KEY: key, VALUE_KEY: value, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
@@ -244,10 +234,6 @@ class Controlet(Process):
 
         elif msg == "get":
             key = split_req[4]
-
-            if req_id in self._map:
-                print(
-                    f"Exception in _handleReq {self.id} msg: {msg} message already exists")
 
             self._map[req_id] = {STATUS_KEY: RECV,
                                  KEY_KEY: key, REQ_TYPE: msg, REQ_FROM_KEY: 'server'}
@@ -263,7 +249,6 @@ class Controlet(Process):
             self._map[req_id][STATUS_KEY] = READY
 
     def __handleQueue(self):
-        print("handle queue itself")
         while True:
             time.sleep(0.001)
 
@@ -273,7 +258,6 @@ class Controlet(Process):
                     for item in self.__order:
                         f.write(item + "\n")
                     f.write("file written to : " + str(self.id))
-                # print("COMPLETE")
                 continue
 
             QUEUE_LOCK.acquire()
@@ -318,8 +302,6 @@ class Controlet(Process):
 
                 request = self._map.pop(process_req_id, None)
 
-                print(f"processing on {self.id}: {process_req} : {request}")
-
                 conn = None
                 if request[REQ_FROM_KEY] == 'client':
                     conn = request['conn']
@@ -330,14 +312,10 @@ class Controlet(Process):
                 if request[REQ_TYPE] == 'set':
                     value = request[VALUE_KEY]
 
-                    print("set request", key, value)
                     response = self.__setKey(key, value, conn, address=self.node_datalet)
-                    print(f"set request {self.id}, key {key} value {value} respone {response}")
 
                 if request[REQ_TYPE] == 'get':
-                    print(f"get request {self.id}", key)
                     response = self.__getKey(key, conn, address= self.node_datalet)
-                    print(f"get request {self.id}, key {key} respone {response}")
 
                 self.__order.append(
                     f"{process_req_id} {request[REQ_TYPE]} {response}")
@@ -361,8 +339,6 @@ class Controlet(Process):
         else:
             self.__handleClientSet = self.__handleSetNormal
             self.__handleClientGet = self.__handleGetNormal
-
-        print("Controlet process started")
 
         # Start the listening process.
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -400,9 +376,7 @@ class Controlet(Process):
                 else:
                     conn.sendall(b"INVALID_COMMAND\r\n")
             except Exception as e:
-                print(f"Exception raised in: {str(self.__getClock())}")
-                print(e)
-
+                pass
 
 def getArgsFromRequest(request):
     if request[:3] == 'get':

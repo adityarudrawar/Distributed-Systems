@@ -16,7 +16,6 @@ class KVStore:
                  consistency='',
                  storage_directory="",
                  output_directory=""):
-        print("Intializing KV STORE")
 
         if consistency == '':
             print("consistency model not found")
@@ -40,7 +39,6 @@ class KVStore:
 
     def start(self):
         all_processes = []
-        print("Collecting ports for controlets and datalets")
         controlets_ports = []
         datalets_ports = []
 
@@ -53,14 +51,12 @@ class KVStore:
 
         self.__datalet_addresses = []
         datalets = []
-        print("Initializing datalets")
         for i in range(len(datalets_ports)):
             d = datalet.Datalet(address=(
                 self.host, datalets_ports[i]), storage_directory=self.storage_directory, id=i)
             datalets.append(d)
             self.__datalet_addresses.append((self.host, datalets_ports[i]))
 
-        print("Starting datalets")
         for d in datalets:
             d.start()
             all_processes.append(d)
@@ -70,19 +66,15 @@ class KVStore:
             self.__controlet_addresses.append((self.host, controlets_ports[i]))
 
         controlets = []
-        print("Initializing controlets")
         for i in range(len(controlets_ports)):
             print(self.__controlet_addresses[i])
             c = controlet.Controlet(
                 address=self.__controlet_addresses[i], id=i, datalets=self.__datalet_addresses, controlets=self.__controlet_addresses, consistency=self.__consistency, output_directory=self.output_directory)
             controlets.append(c)
 
-        print("Starting controlets")
         for c in controlets:
             c.start()
             all_processes.append(c)
-
-        print("Controlets and Datalets initialized")
 
         # Do we need to wait for them to join? NO
         time.sleep(5)

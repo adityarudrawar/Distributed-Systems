@@ -81,7 +81,6 @@ class Datalet(Process):
                 valueSize = int(before[4].split("\r\n")[0])
                 value = after
             else:
-                print("noreply set to True")
                 noReply = True
                 valueSize = int(before[4])
                 value = after
