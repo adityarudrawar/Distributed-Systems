@@ -8,6 +8,8 @@ Eventual
 
 LINEAR CONSISTENCY:
 Design	
+![Linear consistency](https://user-images.githubusercontent.com/30310911/235394433-09fdf55a-ab44-47c6-affc-0824b2ecf5e4.png)
+
 Implementation
 The architecture consists of two main components, the controlet and datalet. The controlet is responsible for managing the metadata for the system, such as the address of the datalets and the current state of the system. The datalet, on the other hand, is responsible for managing the actual key-value data and processing read and write operations. To ensure linear consistency, the system uses total order broadcast with Lamport clocks to order all operations in the system. Each operation is assigned a unique ID, which contains the Lamport clock value of the node that initiated the operation. The ID is included in the broadcast messages, which ensures that all nodes receive the same messages in the same order. 
 
@@ -29,7 +31,7 @@ Performance evaluation
 
 SEQUENTIAL CONSISTENCY:
 Design
-
+![sequential consistency](https://user-images.githubusercontent.com/30310911/235394449-d19042a4-ca32-4c4c-99d6-87afb7ce96db.png)
 
 Implementation:
 To implement sequential consistency in the distributed key-value store, a combination of techniques was used. For GET operations, a local read protocol was implemented. This allowed nodes to read data locally without having to go through a consensus protocol, improving the performance and reducing the latency of read operations in the system. When a node receives a read request, it first checks its local copy of the data and returns it if it is up-to-date. Since the local read protocol guarantees that the data is up-to-date, there is no need to perform a consensus protocol for get operations.
@@ -38,8 +40,7 @@ For SET operations, Total Order Broadcast (TOB) was used to ensure that all node
 
 EVENTUAL CONSISTENCY:
 Design
-
-
+![Eventual consistency](https://user-images.githubusercontent.com/30310911/235394456-72af64bc-2daa-46f5-ae36-ab21efd9fb66.png)
 
 Implementation
 To achieve eventual consistency in the distributed key-value store, a local write protocol was implemented. This protocol is used to ensure that all write operations performed on the system are eventually propagated to all datalets, thereby ensuring that all clients have consistent access to the most up-to-date version of the data.
