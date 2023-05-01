@@ -2,9 +2,9 @@
 #### Assignment: Distributed KV Store
 
 #### CONSISTENCIES IMPLEMENTED:
-Linear
-Sequential
-Eventual
+1. Linear
+2. Sequential
+3. Eventual
 
 #### LINEAR CONSISTENCY:
 ##### Design	
