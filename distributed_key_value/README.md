@@ -1,19 +1,19 @@
-Name: Aditya Arun Rudrawar
-Assignment: Distributed KV Store
+#### Name: Aditya Arun Rudrawar
+#### Assignment: Distributed KV Store
 
-CONSISTENCIES IMPLEMENTED:
+#### CONSISTENCIES IMPLEMENTED:
 Linear
 Sequential
 Eventual
 
-LINEAR CONSISTENCY:
-Design	
+#### LINEAR CONSISTENCY:
+##### Design	
 ![Linear consistency](https://user-images.githubusercontent.com/30310911/235394433-09fdf55a-ab44-47c6-affc-0824b2ecf5e4.png)
 
-Implementation
+##### Implementation
 The architecture consists of two main components, the controlet and datalet. The controlet is responsible for managing the metadata for the system, such as the address of the datalets and the current state of the system. The datalet, on the other hand, is responsible for managing the actual key-value data and processing read and write operations. To ensure linear consistency, the system uses total order broadcast with Lamport clocks to order all operations in the system. Each operation is assigned a unique ID, which contains the Lamport clock value of the node that initiated the operation. The ID is included in the broadcast messages, which ensures that all nodes receive the same messages in the same order. 
 
-Algorithm:
+##### Algorithm:
 When a request comes to the controlet, it increments its counter, generates a unique id for that operation.
 The controlet now puts the request with its unique id in its local queue, with its lamport clock. The id is used to get to the status of the request in future operations. Then, the controller broadcasts the request to every other controlet with the unique id.
 When a controlet receives a broadcast, the broadcast message consists of the unique id, the lamport clock, and then the request is added to its own local queue.
@@ -29,20 +29,20 @@ This TOB is implemented for each operation such as GET/SET for linear consistenc
 Performance evaluation
 
 
-SEQUENTIAL CONSISTENCY:
-Design
+#### SEQUENTIAL CONSISTENCY:
+##### Design
 ![sequential consistency](https://user-images.githubusercontent.com/30310911/235394449-d19042a4-ca32-4c4c-99d6-87afb7ce96db.png)
 
-Implementation:
+##### Implementation:
 To implement sequential consistency in the distributed key-value store, a combination of techniques was used. For GET operations, a local read protocol was implemented. This allowed nodes to read data locally without having to go through a consensus protocol, improving the performance and reducing the latency of read operations in the system. When a node receives a read request, it first checks its local copy of the data and returns it if it is up-to-date. Since the local read protocol guarantees that the data is up-to-date, there is no need to perform a consensus protocol for get operations.
 
 For SET operations, Total Order Broadcast (TOB) was used to ensure that all nodes in the system receive messages in the same order. Each message is assigned a unique ID using a combination of the sender's Lamport clock value and a unique identifier for that node. When a node receives a message, it adds it to its incoming message queue and checks if all messages with smaller IDs have been delivered. If so, it adds the message to its deliverable queue and delivers all messages in the queue in the order of their IDs. This technique ensures that all nodes apply messages in the same order, providing linear consistency for the system. By using TOB for set operations, the performance of write operations is improved as they don't require waiting for consensus to be reached before committing the changes.
 
-EVENTUAL CONSISTENCY:
-Design
+#### EVENTUAL CONSISTENCY:
+##### Design
 ![Eventual consistency](https://user-images.githubusercontent.com/30310911/235394456-72af64bc-2daa-46f5-ae36-ab21efd9fb66.png)
 
-Implementation
+##### Implementation
 To achieve eventual consistency in the distributed key-value store, a local write protocol was implemented. This protocol is used to ensure that all write operations performed on the system are eventually propagated to all datalets, thereby ensuring that all clients have consistent access to the most up-to-date version of the data.
 
 In this protocol, each key is assigned to one of the controlets, which are responsible for all write operations related to that key. The controlets maintain a counter for each key that is updated for every write operation. This counter ensures that there are no race conditions when multiple write operations are performed concurrently.
