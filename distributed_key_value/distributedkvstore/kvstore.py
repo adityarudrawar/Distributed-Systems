@@ -49,7 +49,6 @@ class KVStore:
 
     def start(self):
         print("STARTING CONTROL PLANE AND DATA PLANE")
-        all_processes = []
         controlets_ports = []
         datalets_ports = []
 
@@ -70,7 +69,6 @@ class KVStore:
 
         for d in datalets:
             d.start()
-            all_processes.append(d)
 
         self.__controlet_addresses = []
         for i in range(len(controlets_ports)):
@@ -84,7 +82,6 @@ class KVStore:
 
         for c in controlets:
             c.start()
-            all_processes.append(c)
 
         # Do we need to wait for them to join? NO
         time.sleep(2)

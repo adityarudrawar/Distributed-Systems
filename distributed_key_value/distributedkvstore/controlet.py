@@ -249,7 +249,7 @@ class Controlet(Process):
 
     def __handleQueue(self):
         while True:
-            time.sleep(0.001)
+            # time.sleep(0.001)
 
             if not self.__queue:
 
@@ -283,9 +283,7 @@ class Controlet(Process):
                     # Change the status to ACK_SENT
                     self.__map[process_req_id][STATUS] = ACK_SENT
 
-            # If the staus is 'ACK_SENT' do noting
-            if self.__map[process_req_id][STATUS] == ACK_SENT:
-                pass
+            # If the staus is 'ACK_SENT' do nothing
 
             if self.__map[process_req_id][STATUS] == ACK_RECV:
 
