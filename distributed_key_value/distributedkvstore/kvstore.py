@@ -31,8 +31,17 @@ class KVStore:
 
         self.output_directory = output_directory
 
+        try:
+            shutil.rmtree(self.output_directory)
+            shutil.rmtree(self.storage_directory)
+        except OSError as e:
+            print("Error: %s - %s." % (e.filename, e.strerror))
+
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory)
+
+        if not os.path.exists(self.storage_directory):
+            os.makedirs(self.storage_directory)
 
 
     def get_controlet_address(self):

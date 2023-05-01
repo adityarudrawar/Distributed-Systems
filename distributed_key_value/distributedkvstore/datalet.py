@@ -13,7 +13,7 @@ class Datalet(Process):
 
         self.address = address
 
-        self.storage_directory = storage_directory + "_" + str(id)
+        self.storage_directory = storage_directory + "\\" + str(id)
 
         self.id = id
 
