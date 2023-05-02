@@ -78,6 +78,7 @@ if __name__ == "__main__":
     # Put a read request. 
     # Wait for the time.sleep to get over and then send a read request again.
 
+    print("+++++++++++++++ TEST 1: SHOWCASING STALE READ  ++++++++++++++")
     print("Setting the initial value of the key 'test_key' to 1")
     threading.Thread(target=(memcacheClientSet), args=(server_addresses[2], 'test_key', 1,)).start()
 
@@ -106,6 +107,8 @@ if __name__ == "__main__":
     
     print("Waiting for the write to complete")
     time.sleep(7)
+
+    print("+++++++++++++++ TEST 2: SHOWCASING EVENTUAL WRITE  ++++++++++++++")
 
     print("Showcasing the updated value from the write should be 2 after enough time has passed.")
     threads = []

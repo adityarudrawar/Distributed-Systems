@@ -66,6 +66,8 @@ if __name__ == "__main__":
 
     kvs.start()
 
+    time.sleep(2)
+    
     server_addresses = kvs.get_controlet_address()
 
     numRequests = 5
@@ -73,6 +75,7 @@ if __name__ == "__main__":
 
 
     # SET TEST CASE
+    print("++++++++++ TEST 1: MULTIPLE SET OPERATIONS ON MULTIPLE SERVERS+++++++++++++++++++")
     threads = []
     for i in range(numRequests):
         setKey = keys_generated[i]
@@ -92,6 +95,7 @@ if __name__ == "__main__":
     print("SET TEST CASE COMPLETED")
 
     # GET TEST CASE
+    print("++++++++++ TEST 2: MULTIPLE GET OPERATIONS ON MULTIPLE SERVERS+++++++++++++++++++")
     threads = []
     for i in range(numRequests):
         getKey = keys_generated[i]
@@ -109,7 +113,9 @@ if __name__ == "__main__":
 
 
     print("GET TEST CASE COMPLETED")
+    
     # SET AND GET TEST CASE
+    print("++++++++++ TEST 3: MULTIPLE CONCURRENT SET AND GET  OPERATIONS ON MULTIPLE SERVERS+++++++++++++++++++")
     threads = []
     for i in range(numRequests):
         if i % 2 == 0:
