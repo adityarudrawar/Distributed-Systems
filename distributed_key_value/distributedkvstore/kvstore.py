@@ -37,7 +37,7 @@ class KVStore:
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
 
-        if self.output_directory != "" and os.path.exists(self.output_directory):
+        if self.output_directory != "" and not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory)
 
         if not os.path.exists(self.storage_directory):
