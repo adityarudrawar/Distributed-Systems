@@ -151,7 +151,7 @@ class Controlet(Process):
             counter = self.__counter
             
             # Augmented delay in the network while broadcasting the write request
-            time.sleep(5)
+            # time.sleep(5)
 
             response = self.__setKey(key=key, value=value, conn=conn, flags=counter, expiry=expiry, noReply=noReply, address = self.__node_datalet)
 
@@ -259,7 +259,7 @@ class Controlet(Process):
                 with open(self.__output_directory + '\order_result_' + str(self.__id) + '.txt', 'w') as f:
                     for item in self.__order:
                         f.write(item + '\n')
-                    f.write('file written to : ' + str(self.__id))
+                    # f.write('file written to : ' + str(self.__id))
                 continue
 
             QUEUE_LOCK.acquire()
