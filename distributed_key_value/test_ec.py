@@ -28,24 +28,18 @@ def customClient(address, message):
     clientSocket.close()
 
 
-def memcacheClientSet(address, key, value, response_times, index):
-    start_time = time.time()
+def memcacheClientSet(address, key, value):
     c = Client(address)
     response = c.set(key, value, noreply=False)
     print("SET response ", response)
-    end_time = time.time()
     c.close()
-    response_times[index] = end_time - start_time
 
 
-def memcacheClientGet(address, key, response_times, index):
-    start_time = time.time()
+def memcacheClientGet(address, key):
     c = Client(address)
     response = c.get(key)
     print("GET response ", response)
-    end_time = time.time()
     c.close()
-    response_times[index] = end_time - start_time
 
 
 if __name__ == "__main__":
@@ -53,109 +47,58 @@ if __name__ == "__main__":
 
     kvs = kvstore.KVStore(
         consistency='eventual_consistency',
-        replicas=3,
+        replicas=5,
         storage_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\storage\key_value',
         output_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\output\eventual_consistency_output'
         )
 
     kvs.start()
 
+    time.sleep(2)
+    
     server_addresses = kvs.get_controlet_address()
 
-    set_avg_response_times = []
-    get_avg_response_times = []
-    set_and_get_avg_response_times = []
+    numRequests = 10
+
+    # sends write request
+    # Stale the broadcast to the other datalets by introducing time.sleep
+    # Put a read request. 
+    # Wait for the time.sleep to get over and then send a read request again.
+
+    print("Setting the initial value of the key to 1")
+    threading.Thread(target=(memcacheClientSet), args=(server_addresses[2], 'test_key', 1,)).start()
+
+    time.sleep(10)
+
+    print("Checking the vlaue is updated or not everywhere")
+    threads = []
+    for address in (server_addresses):
+        threads.append(threading.Thread(target=(memcacheClientGet), args=(address, 'test_key', )))
     
-    num_requests_range = [10, 30, 50, 70, 100]
-    for num in (num_requests_range):
-        numRequests = num
-        keys_generated = [random_string(7) + "_" + str(i) for i in range(numRequests)]
+    for t in threads:
+        t.start()
+    
+    for t in threads:
+        t.join()
 
+    print("Now starting a new write to set test_key to 2")    
+    threading.Thread(target=(memcacheClientSet), args=(server_addresses[2], 'test_key', 2,)).start()
+    print("time.sleep introduces delay in the broadcast.")
 
-        # SET TEST CASE
-        response_times = [float("inf") for _ in range(numRequests)]
-        threads = []
-        for i in range(numRequests):
-            setKey = keys_generated[i]
-            setValue = random_string(7)
-            t = threading.Thread(target=(memcacheClientSet), args=(
-                random.choice(server_addresses), setKey, setValue, response_times, i))
-            threads.append(t)
+    print("Showcasing the stale read, since after a write operation it should be have been 2, but it is 1.")
+    threading.Thread(target=(memcacheClientGet), args=(server_addresses[4], 'test_key',)).start()
 
-        # random.shuffle(threads)
+    time.sleep(7)
 
-        for t in threads:
-            t.start()
+    print("Showcasing the updated value from the write should be 2.")
+    threads = []
+    for address in server_addresses:
+        threads.append(threading.Thread(target=(memcacheClientGet), args=(address, 'test_key', )))
 
-        for t in threads:
-            t.join()
+    for t in threads:
+        t.start()
+    
+    for t in threads:
+        t.join()
 
-        avg_response_time = sum(response_times) / num
-        set_avg_response_times.append(avg_response_time)
-        print("SET TEST CASE COMPLETED")
-
-        # GET TEST CASE
-        response_times = [float("inf") for _ in range(numRequests)]
-        threads = []
-        for i in range(numRequests):
-            getKey = keys_generated[i]
-            t = threading.Thread(target=(memcacheClientGet), args=(
-                random.choice(server_addresses), getKey, response_times, i))
-            threads.append(t)
-
-        # random.shuffle(threads)
-
-        for t in threads:
-            t.start()
-
-        for t in threads:
-            t.join()
-   
-        avg_response_time = sum(response_times) / num
-        get_avg_response_times.append(avg_response_time)
-
-        print("GET TEST CASE COMPLETED")
-        # SET AND GET TEST CASE
-        response_times = [float("inf") for _ in range(numRequests)]
-        threads = []
-        for i in range(numRequests):
-            if i % 2 == 0:
-                getKey = random.choice(keys_generated)
-                t = threading.Thread(target=(memcacheClientGet), args=(
-                    random.choice(server_addresses), getKey, response_times, i))
-                threads.append(t)
-            else:
-                setKey = keys_generated[i]
-                setValue = random_string(7)
-                t = threading.Thread(target=(memcacheClientSet), args=(
-                    random.choice(server_addresses), setKey, setValue, response_times, i))
-                threads.append(t)
-        
-        # random.shuffle(threads)
-
-        for t in threads:
-            t.start()
-
-        for t in threads:
-            t.join()
-
-        avg_response_time = sum(response_times) / num
-        set_and_get_avg_response_times.append(avg_response_time)
-
-        print(f"test completed {num}")
-
-    plt.plot(num_requests_range, set_avg_response_times)
-    plt.xlabel('Number of requests')
-    plt.ylabel('Average response time (seconds)')
-    plt.show()
-
-    plt.plot(num_requests_range, get_avg_response_times)
-    plt.xlabel('Number of requests')
-    plt.ylabel('Average response time (seconds)')
-    plt.show()
-
-    plt.plot(num_requests_range, set_and_get_avg_response_times)
-    plt.xlabel('Number of requests')
-    plt.ylabel('Average response time (seconds)')
-    plt.show()
-    exit()
+    print(f"test completed {numRequests}")
