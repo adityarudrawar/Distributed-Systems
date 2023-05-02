@@ -8,9 +8,10 @@ from distributedkvstore import kvstore
 import time
 import matplotlib.pyplot as plt
 
-# Eventual Local Read, writes to anyserver with asynchronous broadcast to every one else with a logical key respective to each key
-# Linear Read/Write => TOB
-# Sequential Local read, write is TOB [No master is required]
+EVENTUAL_CONSISTENCY = 'eventual_consistency'
+LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
+SEQUENTIAL_CONSISTENCY = 'sequential_consistency'
+# NOT IMPLEMENTED CASUAL_CONSISTENCY = 'casual_consistency'
 
 def random_string(length):
     letters = string.ascii_lowercase

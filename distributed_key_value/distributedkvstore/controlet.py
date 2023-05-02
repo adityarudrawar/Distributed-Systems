@@ -255,11 +255,11 @@ class Controlet(Process):
             # time.sleep(0.001)
 
             if not self.__queue:
-
-                with open(self.__output_directory + '\order_result_' + str(self.__id) + '.txt', 'w') as f:
-                    for item in self.__order:
-                        f.write(item + '\n')
-                    f.write('file written to : ' + str(self.__id))
+                if self.__output_directory != "":
+                    with open(self.__output_directory + '\order_result_' + str(self.__id) + '.txt', 'w') as f:
+                        for item in self.__order:
+                            f.write(item + '\n')
+                        f.write('file written to : ' + str(self.__id))
                 continue
 
             QUEUE_LOCK.acquire()

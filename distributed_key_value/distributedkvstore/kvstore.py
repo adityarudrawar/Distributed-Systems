@@ -8,7 +8,7 @@ import shutil
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
 LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
 SEQUENTIAL_CONSISTENCY = 'sequential_consistency'
-CASUAL_CONSISTENCY = 'casual_consistency'
+# NOT IMPLEMENTED CASUAL_CONSISTENCY = 'casual_consistency'
 
 
 class KVStore:
@@ -32,12 +32,12 @@ class KVStore:
         self.output_directory = output_directory
 
         try:
-            shutil.rmtree(self.output_directory)
             shutil.rmtree(self.storage_directory)
+            shutil.rmtree(self.output_directory)
         except OSError as e:
             print("Error: %s - %s." % (e.filename, e.strerror))
 
-        if not os.path.exists(self.output_directory):
+        if self.output_directory != "" and os.path.exists(self.output_directory):
             os.makedirs(self.output_directory)
 
         if not os.path.exists(self.storage_directory):
