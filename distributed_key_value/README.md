@@ -10,8 +10,7 @@
 
 The architecture was influenced by the [BESPOKV](https://dl.acm.org/doi/abs/10.1109/SC.2018.00005?download=true). The system is divided in to a Control plane and Data plane. The Control plane handles all the communications from the client, broadcasting, ordering from other replicas, and communication between its Datalet layer.
 
-This seperation creates a nice hotswappable parts.
-You can simply swap any off the shelf key value store with memcache support for the datalayer.
+This separation creates nice hot swappable parts. You can simply swap any off the shelf key value store with memcache support for the datalayer.
 
 
 #### LINEAR CONSISTENCY:
