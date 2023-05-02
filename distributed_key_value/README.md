@@ -6,6 +6,14 @@
 2. Sequential
 3. Eventual
 
+#### ARCHITECTURE:
+
+The architecture was influenced by the [BESPOKV](https://dl.acm.org/doi/abs/10.1109/SC.2018.00005?download=true). The system is divided in to a Control plane and Data plane. The Control plane handles all the communications from the client, broadcasting, ordering from other replicas, and communication between its Datalet layer.
+
+This seperation creates a nice hotswappable parts.
+You can simply swap any off the shelf key value store with memcache support for the datalayer.
+
+
 #### LINEAR CONSISTENCY:
 ##### Design	
 ![Linear consistency](https://user-images.githubusercontent.com/30310911/235394433-09fdf55a-ab44-47c6-affc-0824b2ecf5e4.png)
@@ -68,3 +76,34 @@ CONSTRAINTS, LIMITATIONS AND ASSUMPTIONS
 
 REFERENCES:
 BESPOKV
+
+
+#### How to run
+1. Import the kvstore file from the library
+ex: `from distributedkvstore import kvstore`
+
+2. You can start the program by initializing the class like `kvs = kvstore.KVStore()`
+
+3. Params that you can pass to KVStore 
+    ```
+    consistency : string,
+    replicas : int = 3,
+    storage_directory : string = '',
+    output_directory : string = ''
+    ```
+
+4. After you have initailized an object of the kvstore class. You can start the controlets and datalets by calling the `start()` method on the class
+
+5. You can get the addresses of all the controlets `get_controlet_address()` method.
+
+6. Client can connect through a the standard memcache client.
+Ex: 
+```
+    from pymemcache.client.base import Client
+    
+    
+    c = Client(address)
+    response = c.set(key, value, noreply=False)
+    print("SET response ", response)
+    c.close()
+```
