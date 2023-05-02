@@ -80,6 +80,7 @@ The format of the statement is
 
 As you can see all the requests are processed in the same order across all the servers.
 Server 0:
+
 Server 1:
 Server 2:
 Linear Consistency test case output:
