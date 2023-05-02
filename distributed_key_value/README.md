@@ -5,16 +5,16 @@
 1. Import the kvstore file from the library
 2. You can start the program by initializing the class like `kvs = kvstore.KVStore()`
 3. Params that you can pass to KVStore 
-
+```
     consistency : string,
     replicas : int = 3,
     storage_directory : string = '',
     output_directory : string = ''
-
+```
 4. After you have initialized the object of the kvstore class. You can start the controlets and datalets by calling the `start()` method on the class
 5. You can get the addresses of all the controlets get_controlet_address() method.
 6. Clients can connect through the standard pymemcache client.
-
+```
     from pymemcache.client.base import Client
    
    
@@ -22,7 +22,7 @@
     response = c.set(key, value, noreply=False)
     print("SET response ", response)
     c.close()
-
+```
 7. You can pass the respective string for the consistency you want.
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
 LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
