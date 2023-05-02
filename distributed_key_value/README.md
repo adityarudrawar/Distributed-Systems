@@ -33,6 +33,25 @@ Note: Whenever a request is added to the queue, the queue is sorted based on the
 
 This TOB is implemented for each operation such as GET/SET for linear consistency.
 
+##### Testing
+In linear consistency, the write and read operations need to be ordered. Therefore, the system uses the total order broadcast 2 Ack method with Lamport clocks for ordering.
+
+When a request is made, the GET/SET requests are broadcasted and sent to datelat in the same sequence.
+
+The sequence of operations that each server performs is stored in the output/linear_consistency_output folder.
+
+Each file indicates the order of requests it has processed, and that's how we test if every server is processing in the same order.
+
+The system is tested against 3 replicas, a total of 30 get and set requests. The order of operation that resulted in shown below:
+
+The format of teh statement is 
+`reqid: {unique_request_id} {set/get} key {key}  {response from datalet}`
+
+As you can see all the requests are processed in the same order across all the servers.
+
+Server 0:
+Server 1:
+Server 2:
 
 Performance evaluation
 
