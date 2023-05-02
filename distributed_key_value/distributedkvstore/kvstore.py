@@ -12,7 +12,9 @@ SEQUENTIAL_CONSISTENCY = 'sequential_consistency'
 
 
 class KVStore:
-    def __init__(self, replicas=3,
+    def __init__(self,
+                 system_host = '127.0.0.1',
+                 replicas=3,
                  consistency='',
                  storage_directory="",
                  output_directory=""):
@@ -25,7 +27,7 @@ class KVStore:
         self.__consistency = consistency
         self.replicas = replicas
 
-        self.host = '127.0.0.1'
+        self.host = system_host
 
         self.storage_directory = storage_directory
 
