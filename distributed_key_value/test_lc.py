@@ -7,7 +7,7 @@ from pymemcache.client.base import Client
 from distributedkvstore import kvstore
 import time
 import matplotlib.pyplot as plt
-
+import configparser
 
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
 LINEARIZABLE_CONSISTENCY = 'linearizable_consistency'
@@ -47,12 +47,22 @@ def memcacheClientGet(address, key):
 if __name__ == "__main__":
     PAYLOAD_SIZE = 4096
 
+    config = configparser.ConfigParser()
+    config.read('.env')
+
+    SYSTEM_HOST = config["LINEAR"]["SYSTEM_HOST"]
+    OUTPUT_DIRECTORY = config["LINEAR"]["OUTPUT_DIRECTORY"]
+    STORAGE_DIRECTORY = config["LINEAR"]["SOTRAGE_DIRECTORY"]
+    REPLICAS=int(config["LINEAR"]["REPLICAS"])
+    CONSISTENCY = config["LINEAR"]["CONSISTENCY"]
+
     kvs = kvstore.KVStore(
-        consistency='linearizable_consistency',
-        replicas=3,
-        storage_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\storage\key_value',
-        output_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\output\linearizable_consistency_output'
-        )
+        system_host=SYSTEM_HOST,
+        consistency=CONSISTENCY,
+        replicas=REPLICAS,
+        storage_directory=STORAGE_DIRECTORY,
+        output_directory=OUTPUT_DIRECTORY)
+
 
     kvs.start()
 

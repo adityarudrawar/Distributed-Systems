@@ -7,6 +7,7 @@ from pymemcache.client.base import Client
 from distributedkvstore import kvstore
 import time
 import matplotlib.pyplot as plt
+import configparser
 
 
 EVENTUAL_CONSISTENCY = 'eventual_consistency'
@@ -47,13 +48,22 @@ def memcacheClientGet(address, key):
 
 if __name__ == "__main__":
     PAYLOAD_SIZE = 4096
+    
+    config = configparser.ConfigParser()
+    config.read('.env')
+
+    SYSTEM_HOST = config["EVENTUAL"]["SYSTEM_HOST"]
+    OUTPUT_DIRECTORY = config["EVENTUAL"]["OUTPUT_DIRECTORY"]
+    STORAGE_DIRECTORY = config["EVENTUAL"]["SOTRAGE_DIRECTORY"]
+    REPLICAS=int(config["EVENTUAL"]["REPLICAS"])
+    CONSISTENCY = config["EVENTUAL"]["CONSISTENCY"]
 
     kvs = kvstore.KVStore(
-        consistency='eventual_consistency',
-        replicas=5,
-        storage_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\storage\key_value',
-        output_directory='C:\Work\Projects\Distributed_Systems\distributed_key_value\distributedkvstore\output\eventual_consistency_output'
-        )
+        system_host=SYSTEM_HOST,
+        consistency=CONSISTENCY,
+        replicas=REPLICAS,
+        storage_directory=STORAGE_DIRECTORY,
+        output_directory=OUTPUT_DIRECTORY)
 
     kvs.start()
 
