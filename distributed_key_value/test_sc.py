@@ -5,15 +5,12 @@ import time
 import socket
 from pymemcache.client.base import Client
 from distributedkvstore import kvstore
-import collections
-collections.Callable = collections.abc.Callable
-
-import pdb
+import time
+import matplotlib.pyplot as plt
 
 # Eventual Local Read, writes to anyserver with asynchronous broadcast to every one else with a logical key respective to each key
 # Linear Read/Write => TOB
 # Sequential Local read, write is TOB [No master is required]
-
 
 def random_string(length):
     letters = string.ascii_lowercase
@@ -31,18 +28,24 @@ def customClient(address, message):
     clientSocket.close()
 
 
-def memcacheClientSet(address, key, value):
+def memcacheClientSet(address, key, value, response_times, index):
+    start_time = time.time()
     c = Client(address)
     response = c.set(key, value, noreply=False)
     print("SET response ", response)
+    end_time = time.time()
     c.close()
+    response_times[index] = end_time - start_time
 
 
-def memcacheClientGet(address, key):
+def memcacheClientGet(address, key, response_times, index):
+    start_time = time.time()
     c = Client(address)
     response = c.get(key)
     print("GET response ", response)
+    end_time = time.time()
     c.close()
+    response_times[index] = end_time - start_time
 
 
 if __name__ == "__main__":
@@ -59,34 +62,100 @@ if __name__ == "__main__":
 
     server_addresses = kvs.get_controlet_address()
 
-    numRequests = 4
+    set_avg_response_times = []
+    get_avg_response_times = []
+    set_and_get_avg_response_times = []
+    
+    num_requests_range = [10, 30, 50, 70, 100]
+    for num in (num_requests_range):
+        numRequests = num
+        keys_generated = [random_string(7) + "_" + str(i) for i in range(numRequests)]
 
-    threads = []
-    for i in range(numRequests):
-        setKey = random_string(4)
-        setValue = random_string(7)
-        t = threading.Thread(target=(memcacheClientSet), args=(
-            random.choice(server_addresses), setKey, setValue))
-        threads.append(t)
 
-    # for t in threads:
-    #     t.start()
+        # SET TEST CASE
+        response_times = [float("inf") for _ in range(numRequests)]
+        threads = []
+        for i in range(numRequests):
+            setKey = keys_generated[i]
+            setValue = random_string(7)
+            t = threading.Thread(target=(memcacheClientSet), args=(
+                random.choice(server_addresses), setKey, setValue, response_times, i))
+            threads.append(t)
 
-    # for t in threads:
-    #     t.join()
+        # random.shuffle(threads)
 
-    # threads = []
+        for t in threads:
+            t.start()
 
-    for i in range(numRequests):
-        getKey = '@GJ0_'
-        t = threading.Thread(target=(memcacheClientGet), args=(
-            random.choice(server_addresses), getKey,))
-        threads.append(t)
+        for t in threads:
+            t.join()
 
-    random.shuffle(threads)
+        avg_response_time = sum(response_times) / num
+        set_avg_response_times.append(avg_response_time)
+        print("SET TEST CASE COMPLETED")
 
-    for t in threads:
-        t.start()
+        # GET TEST CASE
+        response_times = [float("inf") for _ in range(numRequests)]
+        threads = []
+        for i in range(numRequests):
+            getKey = keys_generated[i]
+            t = threading.Thread(target=(memcacheClientGet), args=(
+                random.choice(server_addresses), getKey, response_times, i))
+            threads.append(t)
 
-    for t in threads:
-        t.join()
+        # random.shuffle(threads)
+
+        for t in threads:
+            t.start()
+
+        for t in threads:
+            t.join()
+   
+        avg_response_time = sum(response_times) / num
+        get_avg_response_times.append(avg_response_time)
+
+        print("GET TEST CASE COMPLETED")
+        # SET AND GET TEST CASE
+        response_times = [float("inf") for _ in range(numRequests)]
+        threads = []
+        for i in range(numRequests):
+            if i % 2 == 0:
+                getKey = random.choice(keys_generated)
+                t = threading.Thread(target=(memcacheClientGet), args=(
+                    random.choice(server_addresses), getKey, response_times, i))
+                threads.append(t)
+            else:
+                setKey = keys_generated[i]
+                setValue = random_string(7)
+                t = threading.Thread(target=(memcacheClientSet), args=(
+                    random.choice(server_addresses), setKey, setValue, response_times, i))
+                threads.append(t)
+        
+        # random.shuffle(threads)
+
+        for t in threads:
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        avg_response_time = sum(response_times) / num
+        set_and_get_avg_response_times.append(avg_response_time)
+
+        print(f"test completed {num}")
+
+    plt.plot(num_requests_range, set_avg_response_times)
+    plt.xlabel('Number of requests')
+    plt.ylabel('Average response time (seconds)')
+    plt.show()
+
+    plt.plot(num_requests_range, get_avg_response_times)
+    plt.xlabel('Number of requests')
+    plt.ylabel('Average response time (seconds)')
+    plt.show()
+
+    plt.plot(num_requests_range, set_and_get_avg_response_times)
+    plt.xlabel('Number of requests')
+    plt.ylabel('Average response time (seconds)')
+    plt.show()
+    exit()
