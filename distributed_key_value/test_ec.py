@@ -55,7 +55,7 @@ if __name__ == "__main__":
     kvs.start()
 
     time.sleep(2)
-    
+
     server_addresses = kvs.get_controlet_address()
 
     numRequests = 10
@@ -65,12 +65,12 @@ if __name__ == "__main__":
     # Put a read request. 
     # Wait for the time.sleep to get over and then send a read request again.
 
-    print("Setting the initial value of the key to 1")
+    print("Setting the initial value of the key 'test_key' to 1")
     threading.Thread(target=(memcacheClientSet), args=(server_addresses[2], 'test_key', 1,)).start()
 
     time.sleep(10)
 
-    print("Checking the vlaue is updated or not everywhere")
+    print("Checking the value is updated everywhere")
     threads = []
     for address in (server_addresses):
         threads.append(threading.Thread(target=(memcacheClientGet), args=(address, 'test_key', )))
@@ -81,16 +81,20 @@ if __name__ == "__main__":
     for t in threads:
         t.join()
 
-    print("Now starting a new write to set test_key to 2")    
+    print("Now starting a new write to set 'test_key' to 2")    
     threading.Thread(target=(memcacheClientSet), args=(server_addresses[2], 'test_key', 2,)).start()
     print("time.sleep introduces delay in the broadcast.")
 
-    print("Showcasing the stale read, since after a write operation it should be have been 2, but it is 1.")
-    threading.Thread(target=(memcacheClientGet), args=(server_addresses[4], 'test_key',)).start()
-
+    print("Showcasing the stale read, After a write operation it should be have been 2 in a linear mannaer, but it is 1.")
+    t = threading.Thread(target=(memcacheClientGet), args=(server_addresses[4], 'test_key',))
+    
+    t.start()
+    t.join()
+    
+    print("Waiting for the write to complete")
     time.sleep(7)
 
-    print("Showcasing the updated value from the write should be 2.")
+    print("Showcasing the updated value from the write should be 2 after enough time has passed.")
     threads = []
     for address in server_addresses:
         threads.append(threading.Thread(target=(memcacheClientGet), args=(address, 'test_key', )))
