@@ -314,7 +314,7 @@ class Controlet(Process):
                 if request[REQ_TYPE] == 'get':
                     response = self.__getKey(key, conn, address= self.__node_datalet)
 
-                self.__order.append(f'{process_req_id} {request[REQ_TYPE]} {response}')
+                self.__order.append(f'reqid: {process_req_id} {request[REQ_TYPE]} key {key}  {response}')
 
             QUEUE_LOCK.release()
 
