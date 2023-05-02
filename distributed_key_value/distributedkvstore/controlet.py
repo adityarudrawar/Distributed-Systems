@@ -152,6 +152,9 @@ class Controlet(Process):
 
             response = self.__setKey(key=key, value=value, conn=conn, flags=counter, expiry=expiry, noReply=noReply, address = self.__node_datalet)
 
+            # Augmented delay in the network while broadcasting the write request
+            time.sleep(5)
+
             for datalet_address in self.__other_datalets:
                 self.__setKey(key, value, flags= counter, expiry=expiry, noReply=noReply, address = datalet_address)
         else:        
