@@ -259,7 +259,7 @@ class Controlet(Process):
                 with open(self.__output_directory + '\order_result_' + str(self.__id) + '.txt', 'w') as f:
                     for item in self.__order:
                         f.write(item + '\n')
-                    # f.write('file written to : ' + str(self.__id))
+                    f.write('file written to : ' + str(self.__id))
                 continue
 
             QUEUE_LOCK.acquire()

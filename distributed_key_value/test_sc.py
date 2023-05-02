@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     server_addresses = kvs.get_controlet_address()
 
-    numRequests = 10
+    numRequests = 5
     keys_generated = [random_string(7) + "_" + str(i) for i in range(numRequests)]
 
 
